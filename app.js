@@ -1175,7 +1175,7 @@ function canvasToPngBlob(){
 }
 
 // *** FIX APPLICATO QUI: Intercettazione metadata per iOS/Safari ***
-document.getElementById('mp4-btn').addEventListener('click',async()=>{
+document.getElementById('mp4-btn').addEventListener('click', async () => {
   if(isCapturing) return
   if(!window.VideoEncoder){ setMP4Status('Errore: WebCodecs non supportato (Chrome 94+)'); return }
   isCapturing=true
@@ -1188,12 +1188,19 @@ document.getElementById('mp4-btn').addEventListener('click',async()=>{
     const target=new ArrayBufferTarget()
     const muxer=new Muxer({target,video:{codec:'avc',width:w,height:h},fastStart:'in-memory'})
     
+    // FIX DEFINITIVO PER iOS/SAFARI
     const encoder=new VideoEncoder({
       output: (chunk, meta) => {
-        if (meta && meta.decoderConfig && meta.decoderConfig.colorSpace === null) {
-          const safeMeta = { ...meta, decoderConfig: { ...meta.decoderConfig } };
-          delete safeMeta.decoderConfig.colorSpace;
-          muxer.addVideoChunk(chunk, safeMeta);
+        // Se Safari restituisce un config sporco/buggato, lo ricreiamo da zero
+        // passando solo lo stretto necessario (description) e nascondendo colorSpace
+        if (meta && meta.decoderConfig) {
+          const cleanMeta = {
+            decoderConfig: {
+              codec: meta.decoderConfig.codec,
+              description: meta.decoderConfig.description
+            }
+          };
+          muxer.addVideoChunk(chunk, cleanMeta);
         } else {
           muxer.addVideoChunk(chunk, meta);
         }
@@ -1201,7 +1208,10 @@ document.getElementById('mp4-btn').addEventListener('click',async()=>{
       error: e => { throw e }
     })
     
-    encoder.configure({codec:'avc1.640034',width:w,height:h,bitrate:20_000_000,framerate:fps})
+    // FIX 2: Abbassato il bitrate a 10Mbps e usato il Main Profile (avc1.4D0032) 
+    // per non far crashare l'encoder hardware dell'iPhone/iPad
+    encoder.configure({codec:'avc1.4D0032',width:w,height:h,bitrate:10_000_000,framerate:fps})
+    
     hideTransformHandles=true
     isPaused=true; lastAutoTriggerTime=-Infinity
     S.lotties.forEach(l=>l.anim.pause())
@@ -1220,7 +1230,13 @@ document.getElementById('mp4-btn').addEventListener('click',async()=>{
     Object.assign(document.createElement('a'),{href:url,download:`video_${S.format}_${Date.now()}.mp4`}).click()
     setTimeout(()=>URL.revokeObjectURL(url),10000)
     setMP4Status('Download MP4 completato'); setTimeout(()=>setMP4Status(''),4000)
-  } catch(err){ console.error(err); setMP4Status('Errore: '+(err.message||err)); isPaused=false; S.lotties.forEach(l=>l.anim.play()); hideTransformHandles=false }
+  } catch(err){ 
+    console.error(err); 
+    // Ora mostriamo l'errore esatto per capire cosa fallisce
+    const msg = err instanceof Error ? err.message : String(err);
+    setMP4Status('Errore: ' + msg); 
+    isPaused=false; S.lotties.forEach(l=>l.anim.play()); hideTransformHandles=false 
+  }
   btn.disabled=false; btn.textContent='Export MP4'; isCapturing=false
 })
 
