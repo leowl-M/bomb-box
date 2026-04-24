@@ -1,5 +1,5 @@
 const FORMATS = { post:{w:1080,h:1440}, story:{w:1080,h:1920}, wide:{w:1920,h:1080} }
-const PALETTE_COLORS = ['#4A60FF','#CEFF00','#FF3EBA','#31A362','#F7F6EB','#141414']
+const PALETTE_COLORS = ['#4A60FF','#CEFF00','#FF3EBA','#31A362','#F7F6EB','#141414','transparent']
 const BUNDLED_FONTS = [
   { family:'PPFrama-ExtraboldItalic', label:'PP Frama Extrabold Italic', file:'Font/PPFrama-ExtraboldItalic.otf' },
   { family:'PPFrama-Regular',         label:'PP Frama Regular',           file:'Font/PPFrama-Regular.otf' },
@@ -34,6 +34,7 @@ function makeTextLayer(text='DESIGN BOMB!!!'){
     text,
     align:'center',
     textColor:'#F7F6EB',
+    fontFamily:'PPFrama-ExtraboldItalic',
     textXPct:50,
     textYPct:50,
     textScale:1.0,
@@ -77,8 +78,8 @@ const mCv    = document.createElement('canvas')
 mCv.width = 4000; mCv.height = 300
 const mCtx   = mCv.getContext('2d')
 
-function fontStack() { return `'${S.currentFont}', ${FONT_FALLBACK}` }
-function fontStr(size) { return `900 italic ${size}px ${fontStack()}` }
+function fontStack(fontFamily) { return `'${fontFamily || S.currentFont}', ${FONT_FALLBACK}` }
+function fontStr(size, fontFamily) { return `900 italic ${size}px ${fontStack(fontFamily)}` }
 function activeText(){
   let t = S.texts.find(x=>x.id===S.activeTextId)
   if(!t){
@@ -116,8 +117,8 @@ function setFormat(fmt) {
   recalcFont()
 }
 
-function measureAt(text, size) {
-  mCtx.font = fontStr(size)
+function measureAt(text, size, fontFamily) {
+  mCtx.font = fontStr(size, fontFamily)
   if('letterSpacing' in mCtx) mCtx.letterSpacing = S.kerning+'px'
   const m = mCtx.measureText(text)
   const hasB = typeof m.actualBoundingBoxLeft==='number'
@@ -130,15 +131,16 @@ function recalcFont() {
   if(avail<=0) return
   const lines = S.texts.flatMap(t=>{
     const ls=(t.text||'').split('\n').map(l=>l.trim()).filter(Boolean)
-    return ls.length?ls:['M']
+    return (ls.length?ls:['M']).map(line => ({ line, fontFamily:t.fontFamily }))
   })
   const BASE=100, SAFE=0.995
-  const maxVis = Math.max(...lines.map(l => measureAt(l||'M', BASE).visualW))
+  const maxVis = Math.max(...lines.map(x => measureAt(x.line||'M', BASE, x.fontFamily).visualW))
   S.fontSize = maxVis>0 ? BASE*avail/maxVis*SAFE : BASE
-  ctx.font = fontStr(S.fontSize)
+  ctx.font = fontStr(S.fontSize, activeText().fontFamily)
   if('letterSpacing' in ctx) ctx.letterSpacing = S.kerning+'px'
-  const actualMax = Math.max(...lines.map(l => {
-    const m = ctx.measureText(l||'M')
+  const actualMax = Math.max(...lines.map(x => {
+    ctx.font = fontStr(S.fontSize, x.fontFamily)
+    const m = ctx.measureText(x.line||'M')
     const hasB = typeof m.actualBoundingBoxLeft==='number'
     return hasB ? m.actualBoundingBoxLeft+m.actualBoundingBoxRight : m.width
   }))
@@ -287,7 +289,6 @@ function drawLineWithEffect(text, startX, startY, li, now, effectIntensity, maxW
 function drawFrame(simNow) {
   const {w,h} = FORMATS[S.format]
   ctx.clearRect(0,0,w,h)
-  ctx.fillStyle='#141414'; ctx.fillRect(0,0,w,h)
 
   // global scale
   ctx.save()
@@ -334,13 +335,15 @@ function drawFrame(simNow) {
   }
 
   // measure text
-  ctx.font=fontStr(S.fontSize)
+  ctx.font=fontStr(S.fontSize, activeText().fontFamily)
   if('letterSpacing' in ctx) ctx.letterSpacing=S.kerning+'px'
   for(const t of S.texts){
     const lines=(t.text||'').split('\n').map(l=>l.trim()).filter(Boolean)
     const safeLines=lines.length?lines:['']
     const rh=rowH()
     const totalH=rh*safeLines.length
+    ctx.font=fontStr(S.fontSize, t.fontFamily)
+    if('letterSpacing' in ctx) ctx.letterSpacing=S.kerning+'px'
     const lineWidths=safeLines.map(l=>{
       const m=ctx.measureText(l||' ')
       const hasB=typeof m.actualBoundingBoxLeft==='number'
@@ -355,7 +358,7 @@ function drawFrame(simNow) {
     ctx.rotate(t.textRotation*Math.PI/180)
     ctx.scale(t.textScale,t.textScale)
     ctx.fillStyle=t.textColor
-    ctx.font=fontStr(S.fontSize)
+    ctx.font=fontStr(S.fontSize, t.fontFamily)
     if('letterSpacing' in ctx) ctx.letterSpacing=S.kerning+'px'
     ctx.textBaseline='top'
     ctx.textAlign='left'
@@ -424,7 +427,11 @@ Promise.all(BUNDLED_FONTS.map(f=>document.fonts.load(`900 italic 12px '${f.famil
     recalcFont()
   } else { setFontStatus('Nessun font trovato — carica manualmente','#F0C500') }
 })
-document.getElementById('font-select').addEventListener('change',e=>{ S.currentFont=e.target.value; recalcFont() })
+document.getElementById('font-select').addEventListener('change',e=>{
+  S.currentFont=e.target.value
+  activeText().fontFamily=e.target.value
+  recalcFont()
+})
 const fontZone=document.getElementById('font-zone'), fontInput=document.getElementById('font-input')
 fontZone.addEventListener('click',()=>fontInput.click())
 fontZone.addEventListener('dragover',e=>{e.preventDefault();fontZone.classList.add('drag')})
@@ -442,6 +449,7 @@ async function handleFontFile(file){
     addFontToSelect(familyName,label)
     document.getElementById('font-select').value=familyName
     S.currentFont=familyName; S.fontLoaded=true
+    activeText().fontFamily=familyName
     setFontStatus(label+' caricato','#31A362'); recalcFont()
   } catch(err){ setFontStatus('Errore caricamento font','#FF3EBA') }
 }
@@ -500,8 +508,13 @@ function syncTextUI(){
   const ti=document.getElementById('text-input')
   if(ti) ti.value=t.text
   document.querySelectorAll('.align-btn').forEach(b=>b.classList.toggle('active',b.dataset.align===t.align))
-  document.getElementById('text-dot').style.background=t.textColor
-  document.getElementById('text-hex').textContent=t.textColor.toUpperCase()
+  const fs=document.getElementById('font-select')
+  if(fs && [...fs.options].some(o=>o.value===t.fontFamily)) fs.value=t.fontFamily
+  const isTransparent=t.textColor==='rgba(0,0,0,0)'
+  document.getElementById('text-dot').style.background=isTransparent
+    ? 'repeating-conic-gradient(#c9c9c9 0% 25%, #ffffff 0% 50%) 50% / 10px 10px'
+    : t.textColor
+  document.getElementById('text-hex').textContent=isTransparent ? 'TRANSPARENT' : t.textColor.toUpperCase()
   syncTextLayerSelect()
   syncTextSliders()
 }
@@ -569,14 +582,27 @@ document.getElementById('reset-transform-btn').addEventListener('click',()=>{
 
 // colors
 function updateColor(target,hex){
+  const toCanvasColor = hex==='transparent' ? 'rgba(0,0,0,0)' : hex
   if(target==='bg'){
-    S.bgColor=hex
-    document.getElementById('bg-dot').style.background=hex
-    document.getElementById('bg-hex').textContent=hex.toUpperCase()
+    S.bgColor=toCanvasColor
+    const dot=document.getElementById('bg-dot')
+    if(hex==='transparent' || toCanvasColor==='rgba(0,0,0,0)'){
+      dot.style.background='repeating-conic-gradient(#c9c9c9 0% 25%, #ffffff 0% 50%) 50% / 10px 10px'
+      document.getElementById('bg-hex').textContent='TRANSPARENT'
+    } else {
+      dot.style.background=hex
+      document.getElementById('bg-hex').textContent=hex.toUpperCase()
+    }
   } else {
-    activeText().textColor=hex
-    document.getElementById('text-dot').style.background=hex
-    document.getElementById('text-hex').textContent=hex.toUpperCase()
+    activeText().textColor=toCanvasColor
+    const dot=document.getElementById('text-dot')
+    if(hex==='transparent' || toCanvasColor==='rgba(0,0,0,0)'){
+      dot.style.background='repeating-conic-gradient(#c9c9c9 0% 25%, #ffffff 0% 50%) 50% / 10px 10px'
+      document.getElementById('text-hex').textContent='TRANSPARENT'
+    } else {
+      dot.style.background=hex
+      document.getElementById('text-hex').textContent=hex.toUpperCase()
+    }
   }
 }
 document.querySelectorAll('.color-target').forEach(el=>{
@@ -589,7 +615,13 @@ document.querySelectorAll('.color-target').forEach(el=>{
 PALETTE_COLORS.forEach(c=>{
   const el=document.createElement('div')
   el.className='flex-1 h-8 rounded-md cursor-pointer border-2 border-transparent transition-all hover:scale-105 hover:border-white/60'
-  el.style.background=c; el.title=c
+  if(c==='transparent'){
+    el.style.background='repeating-conic-gradient(#c9c9c9 0% 25%, #ffffff 0% 50%) 50% / 10px 10px'
+    el.title='transparent'
+  } else {
+    el.style.background=c
+    el.title=c
+  }
   el.addEventListener('click',()=>updateColor(S.paletteTarget,c))
   document.getElementById('palette').appendChild(el)
 })
@@ -655,6 +687,17 @@ canvas.addEventListener('mousedown',e=>{
     }
   }
 
+  // lottie drag
+  const {w,h}=FORMATS[S.format]
+  for(let i=S.lotties.length-1;i>=0;i--){
+    const l=S.lotties[i]
+    const lx=l.xPct/100*w, ly=l.yPct/100*h
+    if(Math.abs(mx-lx)<l.animW*l.scale*0.5&&Math.abs(my-ly)<l.animH*l.scale*0.5){
+      draggingLottieIdx=i; lDragOffX=mx-lx; lDragOffY=my-ly
+      setActiveLottie(i); e.preventDefault(); return
+    }
+  }
+
   // text body drag
   for(let i=S.texts.length-1;i>=0;i--){
     if(mouseInTextBox(mx,my,S.texts[i])){
@@ -666,17 +709,6 @@ canvas.addEventListener('mousedown',e=>{
     dragMode='move'
     dragStart={mx,my,xPct:activeText().textXPct,yPct:activeText().textYPct}
     e.preventDefault(); return
-  }
-
-  // lottie drag
-  const {w,h}=FORMATS[S.format]
-  for(let i=S.lotties.length-1;i>=0;i--){
-    const l=S.lotties[i]
-    const lx=l.xPct/100*w, ly=l.yPct/100*h
-    if(Math.abs(mx-lx)<l.animW*l.scale*0.5&&Math.abs(my-ly)<l.animH*l.scale*0.5){
-      draggingLottieIdx=i; lDragOffX=mx-lx; lDragOffY=my-ly
-      setActiveLottie(i); e.preventDefault(); return
-    }
   }
 })
 
@@ -721,12 +753,12 @@ canvas.addEventListener('mousemove',e=>{
     canvas.style.cursor='crosshair'
   } else if(['tl','tr','bl','br'].some(k=>dist(mx,my,H[k].x,H[k].y)<=HANDLE_R*1.8)){
     canvas.style.cursor='nwse-resize'
-  } else if(mouseInTextBox(mx,my)){
-    canvas.style.cursor='move'
   } else if(S.lotties.some(l=>{
     const lx=l.xPct/100*w, ly=l.yPct/100*h
     return Math.abs(mx-lx)<l.animW*l.scale*0.5&&Math.abs(my-ly)<l.animH*l.scale*0.5
   })){
+    canvas.style.cursor='move'
+  } else if(mouseInTextBox(mx,my)){
     canvas.style.cursor='move'
   } else {
     canvas.style.cursor='default'
@@ -848,8 +880,16 @@ document.getElementById('rec-btn').addEventListener('click',()=>{
 })
 
 let mp4MuxerMod=null, isCapturing=false
+let seqZipMod=null, isExportingSequence=false
 async function getMuxer(){ if(mp4MuxerMod) return mp4MuxerMod; mp4MuxerMod=await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.mjs'); return mp4MuxerMod }
 function setMP4Status(msg){ document.getElementById('mp4-status').textContent=msg }
+async function getZipLib(){ if(seqZipMod) return seqZipMod.default || seqZipMod; seqZipMod=await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm'); return seqZipMod.default || seqZipMod }
+function setSeqStatus(msg){ document.getElementById('seq-status').textContent=msg }
+function canvasToPngBlob(){
+  return new Promise((resolve,reject)=>{
+    canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('PNG encode failed')),'image/png')
+  })
+}
 document.getElementById('mp4-btn').addEventListener('click',async()=>{
   if(isCapturing) return
   if(!window.VideoEncoder){ setMP4Status('Errore: WebCodecs non supportato (Chrome 94+)'); return }
@@ -885,6 +925,38 @@ document.getElementById('mp4-btn').addEventListener('click',async()=>{
   } catch(err){ console.error(err); setMP4Status('Errore: '+(err.message||err)); isPaused=false; S.lotties.forEach(l=>l.anim.play()); hideTransformHandles=false }
   btn.disabled=false; btn.textContent='Export MP4'; isCapturing=false
 })
+document.getElementById('seq-btn').addEventListener('click',async()=>{
+  if(isExportingSequence) return
+  isExportingSequence=true
+  const btn=document.getElementById('seq-btn'); btn.disabled=true; btn.textContent='In corso...'
+  const dur=parseInt(document.getElementById('duration').value), fps=S.fps, total=dur*fps
+  try{
+    setSeqStatus('Caricamento zip...')
+    const JSZip=await getZipLib()
+    const zip=new JSZip()
+    isPaused=true; hideTransformHandles=true; lastAutoTriggerTime=-Infinity
+    S.lotties.forEach(l=>l.anim.pause())
+    for(let i=0;i<total;i++){
+      S.lotties.forEach(l=>{ const f=((i/fps)*l.anim.frameRate)%l.anim.totalFrames; l.anim.goToAndStop(f,true) })
+      drawFrame((i/fps)*1000)
+      const blob=await canvasToPngBlob()
+      zip.file(`frame_${String(i+1).padStart(5,'0')}.png`, blob)
+      if(i%10===0){ setSeqStatus(`Render frame ${i+1}/${total}...`); await new Promise(r=>setTimeout(r,0)) }
+    }
+    isPaused=false; hideTransformHandles=false; S.lotties.forEach(l=>l.anim.play())
+    setSeqStatus('Compressione zip...')
+    const zipBlob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}})
+    const url=URL.createObjectURL(zipBlob)
+    Object.assign(document.createElement('a'),{href:url,download:`frames_${S.format}_${Date.now()}.zip`}).click()
+    setTimeout(()=>URL.revokeObjectURL(url),10000)
+    setSeqStatus('Download sequenza completato'); setTimeout(()=>setSeqStatus(''),4000)
+  } catch(err){
+    console.error(err)
+    setSeqStatus('Errore: '+(err.message||err))
+    isPaused=false; hideTransformHandles=false; S.lotties.forEach(l=>l.anim.play())
+  }
+  btn.disabled=false; btn.textContent='Export PNG Sequence'; isExportingSequence=false
+})
 
 // --- preset ---
 const PRESET_KEYS=['format','kerning','lineHeight','fps','bgColor',
@@ -909,12 +981,14 @@ function applyPreset(data){
       text:t.text||'',
       align:t.align||'center',
       textColor:t.textColor||'#F7F6EB',
+      fontFamily:t.fontFamily||S.currentFont,
     }))
     S.activeTextId=(data.activeTextId && S.texts.some(t=>t.id===data.activeTextId)) ? data.activeTextId : S.texts[0].id
   } else {
     const legacy=makeTextLayer(data.text||'DESIGN BOMB!!!')
     legacy.align=data.align||'center'
     legacy.textColor=data.textColor||'#F7F6EB'
+    legacy.fontFamily=data.currentFont||S.currentFont
     legacy.textXPct=('textXPct' in data)?data.textXPct:50
     legacy.textYPct=('textYPct' in data)?data.textYPct:50
     legacy.textScale=('textScale' in data)?data.textScale:1
