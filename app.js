@@ -67,7 +67,7 @@ const loadedFonts = []
 let uploadedFontCount = 0
 
 // drag state
-let dragMode = null  // null | 'move' | 'rotate' | 'scale'
+let dragMode = null
 let dragStart = {}
 let draggingLottieIdx = -1, lDragOffX = 0, lDragOffY = 0
 let hideTransformHandles = false
@@ -163,7 +163,6 @@ function getLines() {
 }
 function rowH() { return S.fontSize * S.lineHeight }
 
-// --- handle geometry (in logical canvas space, inside globalScale) ---
 function getHandlesLogical(t = activeText()) {
   const {w,h} = FORMATS[S.format]
   const hw = t._bboxW * t.textScale / 2
@@ -178,7 +177,6 @@ function getHandlesLogical(t = activeText()) {
   }
 }
 
-// Convert raw canvas coords to logical coords (accounting for globalScale)
 function toLogical(rx, ry) {
   const {w,h} = FORMATS[S.format]
   const gs = S.globalScale
@@ -198,7 +196,6 @@ function mouseInTextBox(lx, ly, t = activeText()) {
 
 function dist(ax,ay,bx,by){ return Math.sqrt((ax-bx)**2+(ay-by)**2) }
 
-// --- draw ---
 function drawHandlesOnCtx() {
   const t = activeText()
   if(t._bboxW===0) return
@@ -216,13 +213,11 @@ function drawHandlesOnCtx() {
   ctx.beginPath(); ctx.moveTo(h.rotBase.x,h.rotBase.y); ctx.lineTo(h.rot.x,h.rot.y); ctx.stroke()
   ctx.setLineDash([])
 
-  // corner handles
   ;[h.tl,h.tr,h.bl,h.br].forEach(pt=>{
     ctx.beginPath(); ctx.arc(pt.x,pt.y,HANDLE_R,0,Math.PI*2)
     ctx.fillStyle='#ffffff'; ctx.fill()
     ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=1.5; ctx.stroke()
   })
-  // rotation handle
   ctx.beginPath(); ctx.arc(h.rot.x,h.rot.y,HANDLE_R,0,Math.PI*2)
   ctx.fillStyle='#CEFF00'; ctx.fill()
   ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=1.5; ctx.stroke()
@@ -341,12 +336,10 @@ function drawFrame(simNow) {
   const {w,h} = FORMATS[S.format]
   ctx.clearRect(0,0,w,h)
 
-  // global scale
   ctx.save()
   ctx.translate(w/2,h/2); ctx.scale(S.globalScale,S.globalScale); ctx.translate(-w/2,-h/2)
   ctx.beginPath(); ctx.rect(0,0,w,h); ctx.clip()
 
-  // inner bg
   const iw=w-S.compPadL-S.compPadR, ih=h-S.compPadT-S.compPadB
   ctx.save()
   ctx.fillStyle=S.bgColor
@@ -372,7 +365,6 @@ function drawFrame(simNow) {
     effectIntensity=Math.max(0,env)
   }
 
-  // image
   if(S.image){
     const img=S.image
     const fit=Math.min(w*0.7/img.width,h*0.7/img.height)*S.imgScale
@@ -385,7 +377,6 @@ function drawFrame(simNow) {
     ctx.restore()
   }
 
-  // measure text
   ctx.font=fontStr(S.fontSize, activeText().fontFamily)
   if('letterSpacing' in ctx) ctx.letterSpacing=S.kerning+'px'
   for(const t of S.texts){
@@ -426,9 +417,8 @@ function drawFrame(simNow) {
     ctx.restore()
   }
 
-  ctx.restore() // bg clip
+  ctx.restore()
 
-  // lottie overlays
   for(const l of S.lotties){
     const lc=l.container.querySelector('canvas')
     if(!lc||lc.width===0) continue
@@ -441,18 +431,15 @@ function drawFrame(simNow) {
     ctx.restore()
   }
 
-  // handles (inside globalScale context)
   if(!hideTransformHandles) drawHandlesOnCtx()
   drawSnapGuides()
 
-  ctx.restore() // global scale
+  ctx.restore()
 }
 
-// --- animation loop ---
 let isPaused=false
 function loop(){ if(!isPaused) drawFrame(); requestAnimationFrame(loop) }
 
-// --- font system (same as original) ---
 function setFontStatus(msg,color){
   const el=document.getElementById('font-status-msg')
   if(el){el.textContent=msg;el.style.color=color||'#737373'}
@@ -506,7 +493,6 @@ async function handleFontFile(file){
   } catch(err){ setFontStatus('Errore caricamento font','#FF3EBA') }
 }
 
-// --- controls ---
 function bindRange(id,key,valId,parse){
   const el=document.getElementById(id), ve=document.getElementById(valId)
   el.addEventListener('input',()=>{
@@ -638,7 +624,6 @@ document.querySelectorAll('.align-btn').forEach(b=>{
   })
 })
 
-// text sticker transform sliders
 function syncTextSliders(){
   const t=activeText()
   document.getElementById('text-x').value=t.textXPct
@@ -675,7 +660,6 @@ document.getElementById('reset-transform-btn').addEventListener('click',()=>{
   syncTextSliders()
 })
 
-// colors
 function updateColor(target,hex){
   const toCanvasColor = hex==='transparent' ? 'rgba(0,0,0,0)' : hex
   if(target==='bg'){
@@ -722,7 +706,6 @@ PALETTE_COLORS.forEach(c=>{
 })
 updateColor('bg',S.bgColor); syncTextUI()
 
-// image
 const uploadZone=document.getElementById('upload-zone'), fileInput=document.getElementById('file-input')
 uploadZone.addEventListener('click',()=>fileInput.click())
 uploadZone.addEventListener('dragover',e=>{e.preventDefault();uploadZone.classList.add('border-neutral-500','text-neutral-400')})
@@ -750,7 +733,6 @@ document.getElementById('remove-img').addEventListener('click',()=>{
   ;['img-thumb','img-scale-row','img-opacity-row','img-corner-radius-row','remove-img'].forEach(id=>document.getElementById(id).style.display='none')
 })
 
-// --- canvas pointer interaction (mouse + touch + pen) ---
 function getCanvasPoint(e){
   const rect=canvas.getBoundingClientRect()
   return {
@@ -850,7 +832,6 @@ canvas.addEventListener('pointerdown',e=>{
   const H=getHandlesLogical()
   scheduleLongPress(e, mx, my)
 
-  // rotation handle
   if(dist(mx,my,H.rot.x,H.rot.y)<=HANDLE_R*1.8){
     const ang=Math.atan2(my-H.cy,mx-H.cx)
     dragMode='rotate'
@@ -859,7 +840,6 @@ canvas.addEventListener('pointerdown',e=>{
     e.preventDefault(); return
   }
 
-  // corner scale handles
   for(const key of ['tl','tr','bl','br']){
     const pt=H[key]
     if(dist(mx,my,pt.x,pt.y)<=HANDLE_R*1.8){
@@ -870,7 +850,6 @@ canvas.addEventListener('pointerdown',e=>{
     }
   }
 
-  // lottie drag
   const {w,h}=FORMATS[S.format]
   for(let i=S.lotties.length-1;i>=0;i--){
     const l=S.lotties[i]
@@ -884,7 +863,6 @@ canvas.addEventListener('pointerdown',e=>{
     }
   }
 
-  // text body drag
   for(let i=S.texts.length-1;i>=0;i--){
     if(mouseInTextBox(mx,my,S.texts[i])){
       setActiveText(S.texts[i].id)
@@ -942,7 +920,6 @@ canvas.addEventListener('pointermove',e=>{
     syncTextSliders(); return
   }
 
-  // cursor hint
   const H=getHandlesLogical()
   if(dist(mx,my,H.rot.x,H.rot.y)<=HANDLE_R*1.8){
     canvas.style.cursor='crosshair'
@@ -1051,7 +1028,6 @@ canvas.addEventListener('touchcancel',()=>{
   activeGuides.rot = false
 },{ passive:false })
 
-// --- lottie system (same as original) ---
 function setLottieStatus(msg,color){ const el=document.getElementById('lottie-status'); if(el){el.textContent=msg;el.style.color=color||'#737373'} }
 function setActiveLottie(idx){
   S.activeLottieIdx=idx
@@ -1139,7 +1115,6 @@ document.getElementById('lottie-add-btn').addEventListener('click',()=>{
   })
 })
 
-// --- recording (same as original) ---
 let recorder=null, recChunks=[], recActive=false
 document.getElementById('rec-btn').addEventListener('click',()=>{
   if(recActive){ recorder?.stop(); return }
@@ -1174,75 +1149,86 @@ function canvasToPngBlob(){
   })
 }
 
-// *** FIX APPLICATO QUI: Intercettazione metadata per iOS/Safari ***
+// -------------------------------------------------------------
+// FIX DEFINITIVO PER SAFARI / WEBMUXER
+// Intercetta qualunque difetto nei metadati e impedisce il crash
+// -------------------------------------------------------------
 document.getElementById('mp4-btn').addEventListener('click', async () => {
-  if(isCapturing) return
-  if(!window.VideoEncoder){ setMP4Status('Errore: WebCodecs non supportato (Chrome 94+)'); return }
-  isCapturing=true
-  const btn=document.getElementById('mp4-btn'); btn.disabled=true; btn.textContent='In corso...'
-  const dur=parseInt(document.getElementById('duration').value), fps=S.fps, total=dur*fps
-  const {w,h}=FORMATS[S.format]
-  try{
+  if (isCapturing) return
+  if (!window.VideoEncoder) { setMP4Status('Errore: WebCodecs non supportato'); return }
+  isCapturing = true
+  const btn = document.getElementById('mp4-btn'); btn.disabled = true; btn.textContent = 'In corso...'
+  const dur = parseInt(document.getElementById('duration').value), fps = S.fps, total = dur * fps
+  const { w, h } = FORMATS[S.format]
+  
+  try {
     setMP4Status('Caricamento mp4-muxer...')
-    const {Muxer,ArrayBufferTarget}=await getMuxer()
-    const target=new ArrayBufferTarget()
-    const muxer=new Muxer({target,video:{codec:'avc',width:w,height:h},fastStart:'in-memory'})
+    const { Muxer, ArrayBufferTarget } = await getMuxer()
+    const target = new ArrayBufferTarget()
+    const muxer = new Muxer({ target, video: { codec: 'avc', width: w, height: h }, fastStart: 'in-memory' })
     
-    // FIX DEFINITIVO SAFARI: Filtro totale su oggetti nulli restituiti dal VideoEncoder
     const encoder = new VideoEncoder({
       output: (chunk, meta) => {
-        if (!meta) {
-          muxer.addVideoChunk(chunk);
-          return;
+        let safeMeta = undefined;
+
+        // Se esistono metadati, li "sanitizziamo" completamente
+        if (meta && meta.decoderConfig) {
+          safeMeta = {
+            decoderConfig: {
+              codec: meta.decoderConfig.codec,
+              description: meta.decoderConfig.description,
+              codedWidth: meta.decoderConfig.codedWidth,
+              codedHeight: meta.decoderConfig.codedHeight,
+              // INIEZIONE DI SALVATAGGIO: se Safari restituisce null qui, lo sovrascriviamo
+              colorSpace: meta.decoderConfig.colorSpace || {
+                primaries: 'bt709',
+                transfer: 'bt709',
+                matrix: 'bt709',
+                fullRange: false
+              }
+            }
+          };
         }
         
-        let cleanMeta = { ...meta };
-        
-        // Bug Safari 1: decoderConfig interamente nullo (crasha il muxer)
-        if (cleanMeta.decoderConfig === null) {
-          delete cleanMeta.decoderConfig;
-        } 
-        // Bug Safari 2: decoderConfig esiste, ma colorSpace al suo interno è nullo
-        else if (cleanMeta.decoderConfig && typeof cleanMeta.decoderConfig === 'object') {
-          cleanMeta.decoderConfig = { ...cleanMeta.decoderConfig };
-          if (cleanMeta.decoderConfig.colorSpace === null) {
-            delete cleanMeta.decoderConfig.colorSpace;
-          }
-        }
-        
-        muxer.addVideoChunk(chunk, cleanMeta);
+        // Passiamo i dati sicuri. Se safeMeta è undefined, 
+        // il muxer ignorerà il config e non crasherà.
+        muxer.addVideoChunk(chunk, safeMeta);
       },
       error: e => { throw e }
     });
     
-    // Manteniamo il profilo AVC "Main" (avc1.4D0032) a 10 Mbps per evitare crash hardware su iOS
-    encoder.configure({codec:'avc1.4D0032',width:w,height:h,bitrate:10_000_000,framerate:fps})
+    // Usiamo il Main Profile (4D) e 10Mbps per sicurezza sui chip mobile
+    encoder.configure({ codec: 'avc1.4D0032', width: w, height: h, bitrate: 10_000_000, framerate: fps })
     
-    hideTransformHandles=true
-    isPaused=true; lastAutoTriggerTime=-Infinity
-    S.lotties.forEach(l=>l.anim.pause())
-    for(let i=0;i<total;i++){
-      S.lotties.forEach(l=>{ const f=((i/fps)*l.anim.frameRate)%l.anim.totalFrames; l.anim.goToAndStop(f,true) })
-      drawFrame((i/fps)*1000)
-      const frame=new VideoFrame(canvas,{timestamp:Math.round((i/fps)*1_000_000)})
-      encoder.encode(frame,{keyFrame:i%(fps*2)===0}); frame.close()
-      if(i%15===0){ setMP4Status(`Encoding frame ${i+1}/${total}...`); await new Promise(r=>setTimeout(r,0)) }
+    hideTransformHandles = true
+    isPaused = true; lastAutoTriggerTime = -Infinity
+    S.lotties.forEach(l => l.anim.pause())
+    
+    for (let i = 0; i < total; i++) {
+      S.lotties.forEach(l => { const f = ((i / fps) * l.anim.frameRate) % l.anim.totalFrames; l.anim.goToAndStop(f, true) })
+      drawFrame((i / fps) * 1000)
+      const frame = new VideoFrame(canvas, { timestamp: Math.round((i / fps) * 1_000_000) })
+      encoder.encode(frame, { keyFrame: i % (fps * 2) === 0 }); frame.close()
+      if (i % 15 === 0) { setMP4Status(`Encoding frame ${i + 1}/${total}...`); await new Promise(r => setTimeout(r, 0)) }
     }
-    isPaused=false; S.lotties.forEach(l=>l.anim.play()); hideTransformHandles=false
+    
+    isPaused = false; S.lotties.forEach(l => l.anim.play()); hideTransformHandles = false
     setMP4Status('Finalizzazione MP4...')
     await encoder.flush(); muxer.finalize()
-    const blob=new Blob([target.buffer],{type:'video/mp4'})
-    const url=URL.createObjectURL(blob)
-    Object.assign(document.createElement('a'),{href:url,download:`video_${S.format}_${Date.now()}.mp4`}).click()
-    setTimeout(()=>URL.revokeObjectURL(url),10000)
-    setMP4Status('Download MP4 completato'); setTimeout(()=>setMP4Status(''),4000)
-  } catch(err){ 
-    console.error(err); 
+    
+    const blob = new Blob([target.buffer], { type: 'video/mp4' })
+    const url = URL.createObjectURL(blob)
+    Object.assign(document.createElement('a'), { href: url, download: `video_${S.format}_${Date.now()}.mp4` }).click()
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
+    
+    setMP4Status('Download MP4 completato'); setTimeout(() => setMP4Status(''), 4000)
+  } catch (err) {
+    console.error(err);
     const msg = err instanceof Error ? err.message : String(err);
-    setMP4Status('Errore: ' + msg); 
-    isPaused=false; S.lotties.forEach(l=>l.anim.play()); hideTransformHandles=false 
+    setMP4Status('Errore: ' + msg);
+    isPaused = false; S.lotties.forEach(l => l.anim.play()); hideTransformHandles = false
   }
-  btn.disabled=false; btn.textContent='Export MP4'; isCapturing=false
+  btn.disabled = false; btn.textContent = 'Export MP4'; isCapturing = false
 })
 
 document.getElementById('seq-btn').addEventListener('click',async()=>{
@@ -1278,7 +1264,6 @@ document.getElementById('seq-btn').addEventListener('click',async()=>{
   btn.disabled=false; btn.textContent='Export PNG Sequence'; isExportingSequence=false
 })
 
-// --- preset ---
 const PRESET_KEYS=['format','kerning','lineHeight','fps','bgColor',
   'imgScale','imgOpacity','imgCornerRadius','autoEffect','autoDelay','autoForce','effectDuration',
   'easingIn','easingOut','tremolio','tremolioForce','tremolioSpeed',
@@ -1353,7 +1338,6 @@ document.getElementById('preset-load-input').addEventListener('change',function(
   reader.readAsText(file); this.value=''
 })
 
-// mobile controls bottom sheet
 ;(function setupMobileControls(){
   const app = document.querySelector('.app')
   const sidebar = document.getElementById('controls')
@@ -1392,7 +1376,6 @@ document.getElementById('preset-load-input').addEventListener('change',function(
   syncByViewport()
 })()
 
-// boot
 setFormat('post')
 syncTextUI()
 loop()
