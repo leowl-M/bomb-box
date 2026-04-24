@@ -34,17 +34,6 @@
       </div>
     </details>
 
-    <details class="sec" open style="--sec-color:var(--blue);">
-      <summary class="sec-head"><span class="sec-title">Formato</span><span class="sec-chev">▸</span></summary>
-      <div class="sec-body">
-        <div class="seg" style="--accent:var(--blue);">
-          <div class="fmt-btn active-btn active" data-fmt="post">Post<small>1080×1440</small></div>
-          <div class="fmt-btn active-btn" data-fmt="story">Story<small>1080×1920</small></div>
-          <div class="fmt-btn active-btn" data-fmt="wide">Wide<small>1920×1080</small></div>
-        </div>
-      </div>
-    </details>
-
     <details class="sec" open style="--sec-color:var(--lime);">
       <summary class="sec-head"><span class="sec-title">Testo</span><span class="sec-chev">▸</span></summary>
       <div class="sec-body">
@@ -219,24 +208,6 @@
       </div>
     </details>
 
-    <details class="sec" open style="--sec-color:var(--pink);">
-      <summary class="sec-head"><span class="sec-title">Colori</span><span class="sec-chev">▸</span></summary>
-      <div class="sec-body">
-        <div class="grid-2">
-          <div class="color-target selected" id="bg-target" data-target="bg">
-            <div class="sw-dot" id="bg-dot" style="background:#141414"></div>
-            <div><div class="lbl">Sfondo</div><div class="val" id="bg-hex">#141414</div></div>
-          </div>
-          <div class="color-target" id="text-target" data-target="text">
-            <div class="sw-dot" id="text-dot" style="background:#F7F6EB"></div>
-            <div><div class="lbl">Testo</div><div class="val" id="text-hex">#F7F6EB</div></div>
-          </div>
-        </div>
-        <div id="palette" class="palette-grid"></div>
-        <div class="hint">click target → click swatch</div>
-      </div>
-    </details>
-
     <details class="sec" style="--sec-color:var(--lime);">
       <summary class="sec-head"><span class="sec-title">Composizione</span><span class="sec-chev">▸</span></summary>
       <div class="sec-body">
@@ -254,79 +225,6 @@
           <label class="lbl">Radius bg</label>
           <input type="range" id="bg-corner-radius" min="0" max="500" step="4" value="0">
           <span class="val" id="bg-corner-radius-v">0</span>
-        </div>
-      </div>
-    </details>
-
-    <details class="sec" style="--sec-color:#F7F6EB;">
-      <summary class="sec-head"><span class="sec-title">Immagine</span><span class="sec-chev">▸</span></summary>
-      <div class="sec-body">
-        <div id="upload-zone" class="drop">
-          <input type="file" id="file-input" accept="image/*" hidden>
-          + Drop immagine
-        </div>
-        <img id="img-thumb" class="img-thumb" style="display:none;">
-        <div class="slider-row" id="img-scale-row" style="display:none;">
-          <label class="lbl">Scala</label>
-          <input type="range" id="img-scale" min="0.05" max="2.0" step="0.01" value="1.0">
-          <span class="val" id="img-scale-v">1.0</span>
-        </div>
-        <div class="slider-row" id="img-opacity-row" style="display:none;">
-          <label class="lbl">Opacità</label>
-          <input type="range" id="img-opacity" min="0" max="1" step="0.01" value="1.0">
-          <span class="val" id="img-opacity-v">1.0</span>
-        </div>
-        <div class="slider-row" id="img-corner-radius-row" style="display:none;">
-          <label class="lbl">Arrotond.</label>
-          <input type="range" id="img-corner-radius" min="0" max="500" step="4" value="0">
-          <span class="val" id="img-corner-radius-v">0</span>
-        </div>
-        <button id="remove-img" class="btn" style="display:none;">Rimuovi immagine</button>
-      </div>
-    </details>
-
-    <details class="sec" open style="--sec-color:var(--green);">
-      <summary class="sec-head"><span class="sec-title">Lottie</span><span class="sec-chev">▸</span></summary>
-      <div class="sec-body">
-        <div id="lottie-preset-row" class="hidden">
-          <div id="lottie-gallery" class="lottie-gallery"></div>
-          <select id="lottie-select" hidden><option value="">Seleziona…</option></select>
-          <button id="lottie-add-btn" hidden>+</button>
-        </div>
-        <div id="lottie-zone" class="drop">
-          <input type="file" id="lottie-input" accept=".json" multiple hidden>
-          + Drop JSON Lottie
-        </div>
-        <div id="lottie-status" class="status-line"></div>
-        <div id="lottie-list" class="stack stack-tight"></div>
-        <div id="lottie-controls" class="stack hidden">
-          <div class="hairline"></div>
-          <div class="row-between"><span class="lbl">Trasforma</span><span class="hint">drag sul canvas</span></div>
-          <div class="slider-row slider-row-compact">
-            <label class="lbl">X %</label>
-            <input type="range" id="lottie-x" min="0" max="100" step="1" value="50" style="--accent:var(--green);">
-            <span class="val" id="lottie-x-v">50</span>
-          </div>
-          <div class="slider-row slider-row-compact">
-            <label class="lbl">Y %</label>
-            <input type="range" id="lottie-y" min="0" max="100" step="1" value="50" style="--accent:var(--green);">
-            <span class="val" id="lottie-y-v">50</span>
-          </div>
-          <div class="slider-row slider-row-compact">
-            <label class="lbl">Scala</label>
-            <input type="range" id="lottie-scale" min="0.05" max="5.0" step="0.05" value="1.0" style="--accent:var(--green);">
-            <span class="val" id="lottie-scale-v">1.00</span>
-          </div>
-          <div class="slider-row slider-row-compact">
-            <label class="lbl">Opac.</label>
-            <input type="range" id="lottie-opacity" min="0" max="1" step="0.01" value="1.0" style="--accent:var(--green);">
-            <span class="val" id="lottie-opacity-v">1.00</span>
-          </div>
-          <div class="slider-row slider-row-compact">
-            <label class="lbl">Rot.</label>
-            <input type="range" id="lottie-rotation" min="-180" max="180" step="1" value="0" style="--accent:var(--green);">
-            <span class="val" id="lottie-rotation-v">0°</span>
-          </div>
         </div>
       </div>
     </details>
@@ -364,6 +262,12 @@
       <div class="topbar-left">
         <div class="topbar-breadcrumb">Canvas / <b>TW Text</b></div>
       </div>
+      <div class="topbar-right" style="display: flex; gap: 8px;">
+        <button id="desktop-image-btn" class="btn btn-inline">Foto</button>
+        <button id="desktop-format-btn" class="btn btn-inline">Formato</button>
+        <button id="desktop-sticker-btn" class="btn btn-inline">Sticker</button>
+        <button id="desktop-color-btn" class="btn btn-inline">Colori</button>
+      </div>
     </header>
     <div id="preview" class="preview-wrap">
       <canvas id="canvas" style="touch-action: none;"></canvas>
@@ -377,9 +281,153 @@
     </div>
   </main>
 
+  <!-- Image Drawer -->
+  <div id="image-drawer" class="image-drawer" hidden>
+    <div class="drawer-header">
+      <div class="drawer-title">Gestione Immagine</div>
+      <button id="close-image-drawer" class="drawer-close-btn">&times;</button>
+    </div>
+    <div class="drawer-body sc">
+      <div id="upload-zone" class="drop">
+        <input type="file" id="file-input" accept="image/*" hidden>
+        + Drop immagine
+      </div>
+      <img id="img-thumb" class="img-thumb" style="display:none; margin-top: 14px;">
+      
+      <div id="image-controls" class="stack" style="margin-top: 20px;">
+        <div class="slider-row" id="img-x-row" style="display:none;">
+          <label class="lbl">Pos. X %</label>
+          <input type="range" id="img-x" min="0" max="100" step="1" value="50">
+          <span class="val" id="img-x-v">50</span>
+        </div>
+        <div class="slider-row" id="img-y-row" style="display:none;">
+          <label class="lbl">Pos. Y %</label>
+          <input type="range" id="img-y" min="0" max="100" step="1" value="50">
+          <span class="val" id="img-y-v">50</span>
+        </div>
+        <div class="slider-row" id="img-scale-row" style="display:none;">
+          <label class="lbl">Scala</label>
+          <input type="range" id="img-scale" min="0.05" max="2.0" step="0.01" value="1.0">
+          <span class="val" id="img-scale-v">1.0</span>
+        </div>
+        <div class="slider-row" id="img-rotation-row" style="display:none;">
+          <label class="lbl">Rotazione</label>
+          <input type="range" id="img-rotation" min="-180" max="180" step="1" value="0">
+          <span class="val" id="img-rotation-v">0°</span>
+        </div>
+        <div class="slider-row" id="img-opacity-row" style="display:none;">
+          <label class="lbl">Opacità</label>
+          <input type="range" id="img-opacity" min="0" max="1" step="0.01" value="1.0">
+          <span class="val" id="img-opacity-v">1.0</span>
+        </div>
+        <div class="slider-row" id="img-corner-radius-row" style="display:none;">
+          <label class="lbl">Arrotond.</label>
+          <input type="range" id="img-corner-radius" min="0" max="500" step="4" value="0">
+          <span class="val" id="img-corner-radius-v">0</span>
+        </div>
+        <button id="remove-img" class="btn" style="display:none;">Rimuovi immagine</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Format Drawer -->
+  <div id="format-drawer" class="format-drawer" hidden>
+    <div class="drawer-header">
+      <div class="drawer-title">Dimensione Canvas</div>
+      <button id="close-format-drawer" class="drawer-close-btn">&times;</button>
+    </div>
+    <div class="drawer-body">
+      <div class="seg" style="--accent:var(--blue);">
+        <div class="fmt-btn active-btn active" data-fmt="post">Post<small>1080×1440</small></div>
+        <div class="fmt-btn active-btn" data-fmt="story">Story<small>1080×1920</small></div>
+        <div class="fmt-btn active-btn" data-fmt="wide">Wide<small>1920×1080</small></div>
+      </div>
+      <div class="hint" style="margin-top: 14px; text-align: center;">Seleziona il formato per ridimensionare il canvas.</div>
+    </div>
+  </div>
+
+  <!-- Sticker Drawer -->
+  <div id="sticker-drawer" class="sticker-drawer" hidden>
+    <div class="drawer-header">
+      <div class="drawer-title">Aggiungi Sticker</div>
+      <button id="close-sticker-drawer" class="drawer-close-btn">&times;</button>
+    </div>
+    <div class="drawer-body sc">
+      <div id="lottie-preset-row">
+        <div id="lottie-gallery" class="lottie-gallery"></div>
+        <select id="lottie-select" hidden><option value="">Seleziona…</option></select>
+        <button id="lottie-add-btn" hidden>+</button>
+      </div>
+      <div class="hairline" style="margin: 20px 0;"></div>
+      <div id="lottie-zone" class="drop">
+        <input type="file" id="lottie-input" accept=".json" multiple hidden>
+        + Drop JSON Lottie
+      </div>
+      <div id="lottie-status" class="status-line" style="text-align:center; margin-top:8px;"></div>
+      <div id="lottie-list" class="stack stack-tight" style="margin-top:20px;"></div>
+      <div id="lottie-controls" class="stack hidden" style="margin-top:20px;">
+        <div class="hairline"></div>
+        <div class="row-between"><span class="lbl">Trasforma selezionato</span><span class="hint">drag sul canvas</span></div>
+        <div class="slider-row slider-row-compact">
+          <label class="lbl">X %</label>
+          <input type="range" id="lottie-x" min="0" max="100" step="1" value="50" style="--accent:var(--green);">
+          <span class="val" id="lottie-x-v">50</span>
+        </div>
+        <div class="slider-row slider-row-compact">
+          <label class="lbl">Y %</label>
+          <input type="range" id="lottie-y" min="0" max="100" step="1" value="50" style="--accent:var(--green);">
+          <span class="val" id="lottie-y-v">50</span>
+        </div>
+        <div class="slider-row slider-row-compact">
+          <label class="lbl">Scala</label>
+          <input type="range" id="lottie-scale" min="0.05" max="5.0" step="0.05" value="1.0" style="--accent:var(--green);">
+          <span class="val" id="lottie-scale-v">1.00</span>
+        </div>
+        <div class="slider-row slider-row-compact">
+          <label class="lbl">Rotaz.</label>
+          <input type="range" id="lottie-rotation" min="-180" max="180" step="1" value="0" style="--accent:var(--green);">
+          <span class="val" id="lottie-rotation-v">0°</span>
+        </div>
+        <div class="slider-row slider-row-compact">
+          <label class="lbl">Opac.</label>
+          <input type="range" id="lottie-opacity" min="0" max="1" step="0.01" value="1.0" style="--accent:var(--green);">
+          <span class="val" id="lottie-opacity-v">1.00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Color Drawer -->
+  <div id="color-drawer" class="color-drawer" hidden>
+    <div class="drawer-header">
+      <div class="drawer-title">Gestione Colori</div>
+      <button id="close-color-drawer" class="drawer-close-btn">&times;</button>
+    </div>
+    <div class="drawer-body sc">
+      <div class="grid-2">
+        <div class="color-target selected" id="bg-target" data-target="bg">
+          <div class="sw-dot" id="bg-dot" style="background:#141414"></div>
+          <div><div class="lbl">Sfondo</div><div class="val" id="bg-hex">#141414</div></div>
+        </div>
+        <div class="color-target" id="text-target" data-target="text">
+          <div class="sw-dot" id="text-dot" style="background:#F7F6EB"></div>
+          <div><div class="lbl">Testo</div><div class="val" id="text-hex">#F7F6EB</div></div>
+        </div>
+      </div>
+      <div id="palette" class="palette-grid" style="margin-top: 14px;"></div>
+      <div class="hint" style="margin-top: 12px; text-align: center;">click target → click swatch</div>
+    </div>
+  </div>
+
 </div>
 
-<button id="mobile-controls-toggle" class="mobile-controls-toggle" type="button" aria-expanded="false" aria-controls="controls">Controlli</button>
+<div class="mobile-actions">
+  <button id="mobile-controls-toggle" class="mobile-controls-toggle" type="button" aria-expanded="false" aria-controls="controls">Controlli</button>
+
+  <button id="mobile-mp4-btn" class="mobile-action-btn" type="button" title="Scarica MP4">
+    <span class="mobile-action-label" style="font-size: 11px; margin-top: 0;">MP4</span>
+  </button>
+</div>
 <div id="mobile-backdrop" class="mobile-backdrop" hidden></div>
 
 <script src="app.js?v=3"></script>

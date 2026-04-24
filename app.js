@@ -49,6 +49,7 @@ const S = {
   kerning:0, lineHeight:1.0, fps:60,
   bgColor:'#141414',
   image:null, imgScale:1.0, imgOpacity:1.0, imgCornerRadius:0,
+  imgXPct:50, imgYPct:50, imgRotation:0,
   fontSize:100, currentFont:'PPFrama-ExtraboldItalic', fontLoaded:false,
   paletteTarget:'bg',
   autoEffect:'none', autoDelay:1000, autoForce:5.0, effectDuration:600,
@@ -58,9 +59,43 @@ const S = {
   lotties:[], activeLottieIdx:-1,
   texts:[makeTextLayer()],
   activeTextId:null,
+  activeLayer: { type:'text', id:null }, // 'text', 'lottie', 'image'
   globalScale:1.0, compPadL:0, compPadR:0, compPadT:0, compPadB:0, bgCornerRadius:0,
 }
 S.activeTextId = S.texts[0].id
+S.activeLayer.id = S.activeTextId
+
+// Unified access to active layer data
+function getActiveLayerData() {
+  const {w, h} = FORMATS[S.format]
+  if (S.activeLayer.type === 'text') {
+    const t = activeText()
+    return { obj:t, type:'text', x:t.textXPct/100*w, y:t.textYPct/100*h, scale:t.textScale, rot:t.textRotation, w:t._bboxW, h:t._bboxH, color:'#CEFF00' }
+  }
+  if (S.activeLayer.type === 'lottie' && S.activeLottieIdx >= 0) {
+    const l = S.lotties[S.activeLottieIdx]
+    return { obj:l, type:'lottie', x:l.xPct/100*w, y:l.yPct/100*h, scale:l.scale, rot:l.rotation||0, w:l.animW, h:l.animH, color:'#5CE0A0' }
+  }
+  if (S.activeLayer.type === 'image' && S.image) {
+    const img = S.image; const fit = Math.min(w*0.7/img.width, h*0.7/img.height)
+    return { obj:img, type:'image', x:S.imgXPct/100*w, y:S.imgYPct/100*h, scale:S.imgScale, rot:S.imgRotation, w:img.width*fit, h:img.height*fit, color:'#7C92FF' }
+  }
+  return null
+}
+
+function updateActiveLayerProp(key, val) {
+  const ld = getActiveLayerData(); if(!ld) return
+  if (ld.type === 'text') {
+    if (key === 'xPct') ld.obj.textXPct = val; else if (key === 'yPct') ld.obj.textYPct = val; else if (key === 'scale') ld.obj.textScale = val; else if (key === 'rot') ld.obj.textRotation = val;
+    syncTextSliders()
+  } else if (ld.type === 'lottie') {
+    if (key === 'xPct') ld.obj.xPct = val; else if (key === 'yPct') ld.obj.yPct = val; else if (key === 'scale') ld.obj.scale = val; else if (key === 'rot') ld.obj.rotation = val;
+    syncLottieSliders()
+  } else if (ld.type === 'image') {
+    if (key === 'xPct') S.imgXPct = val; else if (key === 'yPct') S.imgYPct = val; else if (key === 'scale') S.imgScale = val; else if (key === 'rot') S.imgRotation = val;
+    syncImageSliders()
+  }
+}
 
 let lastAutoTriggerTime = -Infinity
 const loadedFonts = []
@@ -102,6 +137,7 @@ function activeText(){
 function setActiveText(id){
   if(!S.texts.some(t=>t.id===id)) return
   S.activeTextId=id
+  S.activeLayer = { type:'text', id:id }
   syncTextUI()
 }
 function syncTextLayerSelect(){
@@ -163,33 +199,24 @@ function getLines() {
 }
 function rowH() { return S.fontSize * S.lineHeight }
 
-function getHandlesLogical(t = activeText()) {
-  const {w,h} = FORMATS[S.format]
-  const hw = t._bboxW * t.textScale / 2
-  const hh = t._bboxH * t.textScale / 2
-  const ang = t.textRotation * Math.PI / 180
-  const cos = Math.cos(ang), sin = Math.sin(ang)
-  const cx = t.textXPct/100*w, cy = t.textYPct/100*h
+function getHandlesLogical() {
+  const ld = getActiveLayerData(); if (!ld || ld.w === 0) return null
+  const hw = ld.w * ld.scale / 2, hh = ld.h * ld.scale / 2
+  const ang = ld.rot * Math.PI / 180, cos = Math.cos(ang), sin = Math.sin(ang)
+  const cx = ld.x, cy = ld.y
   function r(lx,ly){ return { x:cx+lx*cos-ly*sin, y:cy+lx*sin+ly*cos } }
-  return {
-    tl:r(-hw,-hh), tr:r(hw,-hh), bl:r(-hw,hh), br:r(hw,hh),
-    rot:r(0,-hh-70), rotBase:r(0,-hh), cx, cy, hw, hh,
-  }
+  return { tl:r(-hw,-hh), tr:r(hw,-hh), bl:r(-hw,hh), br:r(hw,hh), rot:r(0,-hh-70), rotBase:r(0,-hh), cx, cy, hw, hh, color:ld.color }
 }
 
 function toLogical(rx, ry) {
-  const {w,h} = FORMATS[S.format]
-  const gs = S.globalScale
+  const {w,h} = FORMATS[S.format]; const gs = S.globalScale
   return { x: w/2+(rx-w/2)/gs, y: h/2+(ry-h/2)/gs }
 }
 
 function mouseInTextBox(lx, ly, t = activeText()) {
-  const {w,h} = FORMATS[S.format]
-  const cx = t.textXPct/100*w, cy = t.textYPct/100*h
-  const ang = -t.textRotation*Math.PI/180
-  const dx=lx-cx, dy=ly-cy
-  const cos=Math.cos(ang), sin=Math.sin(ang)
-  const bx=dx*cos-dy*sin, by=dx*sin+dy*cos
+  const {w,h} = FORMATS[S.format]; const cx = t.textXPct/100*w, cy = t.textYPct/100*h
+  const ang = -t.textRotation*Math.PI/180; const dx=lx-cx, dy=ly-cy
+  const cos=Math.cos(ang), sin=Math.sin(ang); const bx=dx*cos-dy*sin, by=dx*sin+dy*cos
   const hw=t._bboxW*t.textScale/2, hh=t._bboxH*t.textScale/2
   return Math.abs(bx)<=hw+HANDLE_R && Math.abs(by)<=hh+HANDLE_R
 }
@@ -197,63 +224,27 @@ function mouseInTextBox(lx, ly, t = activeText()) {
 function dist(ax,ay,bx,by){ return Math.sqrt((ax-bx)**2+(ay-by)**2) }
 
 function drawHandlesOnCtx() {
-  const t = activeText()
-  if(t._bboxW===0) return
-  const h = getHandlesLogical(t)
+  const h = getHandlesLogical(); if(!h) return
   ctx.save()
-  ctx.strokeStyle = 'rgba(255,255,255,0.75)'
-  ctx.lineWidth = 2.5
-  ctx.setLineDash([10,7])
-  ctx.beginPath()
-  ctx.moveTo(h.tl.x,h.tl.y); ctx.lineTo(h.tr.x,h.tr.y)
-  ctx.lineTo(h.br.x,h.br.y); ctx.lineTo(h.bl.x,h.bl.y)
-  ctx.closePath(); ctx.stroke()
-
-  ctx.setLineDash([5,5])
-  ctx.beginPath(); ctx.moveTo(h.rotBase.x,h.rotBase.y); ctx.lineTo(h.rot.x,h.rot.y); ctx.stroke()
-  ctx.setLineDash([])
-
+  ctx.strokeStyle = h.color; ctx.lineWidth = 2.5; ctx.setLineDash([10,7]); ctx.beginPath()
+  ctx.moveTo(h.tl.x,h.tl.y); ctx.lineTo(h.tr.x,h.tr.y); ctx.lineTo(h.br.x,h.br.y); ctx.lineTo(h.bl.x,h.bl.y); ctx.closePath(); ctx.stroke()
+  ctx.setLineDash([5,5]); ctx.beginPath(); ctx.moveTo(h.rotBase.x,h.rotBase.y); ctx.lineTo(h.rot.x,h.rot.y); ctx.stroke(); ctx.setLineDash([])
   ;[h.tl,h.tr,h.bl,h.br].forEach(pt=>{
-    ctx.beginPath(); ctx.arc(pt.x,pt.y,HANDLE_R,0,Math.PI*2)
-    ctx.fillStyle='#ffffff'; ctx.fill()
-    ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=1.5; ctx.stroke()
+    ctx.beginPath(); ctx.arc(pt.x,pt.y,HANDLE_R,0,Math.PI*2); ctx.fillStyle='#ffffff'; ctx.fill(); ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=1.5; ctx.stroke()
   })
-  ctx.beginPath(); ctx.arc(h.rot.x,h.rot.y,HANDLE_R,0,Math.PI*2)
-  ctx.fillStyle='#CEFF00'; ctx.fill()
-  ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=1.5; ctx.stroke()
-
+  ctx.beginPath(); ctx.arc(h.rot.x,h.rot.y,HANDLE_R,0,Math.PI*2); ctx.fillStyle=h.color; ctx.fill(); ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=1.5; ctx.stroke()
   ctx.restore()
 }
 
 function drawSnapGuides() {
-  const { w, h } = FORMATS[S.format]
-  if (!activeGuides.v && !activeGuides.h && !activeGuides.rot) return
-  ctx.save()
-  ctx.strokeStyle = 'rgba(206,255,0,0.9)'
-  ctx.lineWidth = 2
-  ctx.setLineDash([12, 8])
-  if (activeGuides.v) {
-    ctx.beginPath()
-    ctx.moveTo(w / 2, 0)
-    ctx.lineTo(w / 2, h)
-    ctx.stroke()
-  }
-  if (activeGuides.h) {
-    ctx.beginPath()
-    ctx.moveTo(0, h / 2)
-    ctx.lineTo(w, h / 2)
-    ctx.stroke()
-  }
+  const { w, h } = FORMATS[S.format]; if (!activeGuides.v && !activeGuides.h && !activeGuides.rot) return
+  ctx.save(); ctx.strokeStyle = 'rgba(206,255,0,0.9)'; ctx.lineWidth = 2; ctx.setLineDash([12, 8])
+  if (activeGuides.v) { ctx.beginPath(); ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h); ctx.stroke() }
+  if (activeGuides.h) { ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke() }
   if (activeGuides.rot) {
-    const t = activeText()
-    const cx = t.textXPct / 100 * w
-    const cy = t.textYPct / 100 * h
-    const len = Math.max(t._bboxW, t._bboxH, 180) * 0.7
-    const ang = t.textRotation * Math.PI / 180
-    ctx.beginPath()
-    ctx.moveTo(cx - Math.cos(ang) * len, cy - Math.sin(ang) * len)
-    ctx.lineTo(cx + Math.cos(ang) * len, cy + Math.sin(ang) * len)
-    ctx.stroke()
+    const ld = getActiveLayerData(); if(!ld) { ctx.restore(); return }
+    const len = Math.max(ld.w, ld.h, 180) * 0.7; const ang = ld.rot * Math.PI / 180
+    ctx.beginPath(); ctx.moveTo(ld.x - Math.cos(ang) * len, ld.y - Math.sin(ang) * len); ctx.lineTo(ld.x + Math.cos(ang) * len, ld.y + Math.sin(ang) * len); ctx.stroke()
   }
   ctx.restore()
 }
@@ -369,11 +360,17 @@ function drawFrame(simNow) {
     const img=S.image
     const fit=Math.min(w*0.7/img.width,h*0.7/img.height)*S.imgScale
     const iw2=img.width*fit, ih2=img.height*fit
-    const ix=(w-iw2)/2, iy=(h-ih2)/2
+    const ix=S.imgXPct/100*w, iy=S.imgYPct/100*h
     ctx.save()
     ctx.globalAlpha=S.imgOpacity
-    if(S.imgCornerRadius>0){ ctx.beginPath(); ctx.roundRect(ix,iy,iw2,ih2,S.imgCornerRadius); ctx.clip() }
-    ctx.drawImage(img,ix,iy,iw2,ih2)
+    ctx.translate(ix, iy)
+    ctx.rotate(S.imgRotation * Math.PI / 180)
+    if(S.imgCornerRadius>0){
+      ctx.beginPath()
+      ctx.roundRect(-iw2/2, -ih2/2, iw2, ih2, S.imgCornerRadius)
+      ctx.clip()
+    }
+    ctx.drawImage(img, -iw2/2, -ih2/2, iw2, ih2)
     ctx.restore()
   }
 
@@ -505,6 +502,9 @@ function bindRange(id,key,valId,parse){
 bindRange('kerning','kerning','kerning-v',v=>parseFloat(v))
 bindRange('lh','lineHeight','lh-v',v=>parseFloat(v))
 bindRange('img-scale','imgScale','img-scale-v',v=>parseFloat(v))
+bindRange('img-x','imgXPct','img-x-v',v=>parseFloat(v))
+bindRange('img-y','imgYPct','img-y-v',v=>parseFloat(v))
+bindRange('img-rotation','imgRotation','img-rotation-v',v=>parseFloat(v))
 bindRange('img-opacity','imgOpacity','img-opacity-v',v=>parseFloat(v))
 bindRange('img-corner-radius','imgCornerRadius','img-corner-radius-v',v=>parseInt(v))
 bindRange('global-scale','globalScale','global-scale-v',v=>parseFloat(v))
@@ -684,6 +684,21 @@ function updateColor(target,hex){
     }
   }
 }
+
+function shuffleColors() {
+  const bg = PALETTE_COLORS[Math.floor(Math.random() * PALETTE_COLORS.length)]
+  let text = PALETTE_COLORS[Math.floor(Math.random() * PALETTE_COLORS.length)]
+  // Evitiamo che testo e sfondo siano identici a meno che non siano entrambi trasparenti (poco probabile)
+  let attempts = 0
+  while (text === bg && bg !== 'transparent' && attempts < 10) {
+    text = PALETTE_COLORS[Math.floor(Math.random() * PALETTE_COLORS.length)]
+    attempts++
+  }
+  updateColor('bg', bg)
+  updateColor('text', text)
+  // Feedback aptico se possibile
+  if ('vibrate' in navigator) navigator.vibrate(15)
+}
 document.querySelectorAll('.color-target').forEach(el=>{
   el.addEventListener('click',()=>{
     S.paletteTarget=el.dataset.target
@@ -721,7 +736,7 @@ function handleImageFile(file){
       S.image=img
       document.getElementById('img-thumb').src=e.target.result
       document.getElementById('img-thumb').style.display='block'
-      ;['img-scale-row','img-opacity-row','img-corner-radius-row','remove-img'].forEach(id=>document.getElementById(id).style.display='grid')
+      ;['img-x-row','img-y-row','img-scale-row','img-rotation-row','img-opacity-row','img-corner-radius-row','remove-img'].forEach(id=>document.getElementById(id).style.display='grid')
       document.getElementById('remove-img').style.display='block'
     }
     img.src=e.target.result
@@ -730,7 +745,7 @@ function handleImageFile(file){
 }
 document.getElementById('remove-img').addEventListener('click',()=>{
   S.image=null
-  ;['img-thumb','img-scale-row','img-opacity-row','img-corner-radius-row','remove-img'].forEach(id=>document.getElementById(id).style.display='none')
+  ;['img-thumb','img-x-row','img-y-row','img-scale-row','img-rotation-row','img-opacity-row','img-corner-radius-row','remove-img'].forEach(id=>document.getElementById(id).style.display='none')
 })
 
 function getCanvasPoint(e){
@@ -830,51 +845,63 @@ canvas.addEventListener('pointerdown',e=>{
   const {x:rx,y:ry}=getCanvasPoint(e)
   const {x:mx,y:my}=toLogical(rx,ry)
   const H=getHandlesLogical()
-  scheduleLongPress(e, mx, my)
-
-  if(dist(mx,my,H.rot.x,H.rot.y)<=HANDLE_R*1.8){
-    const ang=Math.atan2(my-H.cy,mx-H.cx)
-    dragMode='rotate'
-    dragStart={mx,my,rotation:activeText().textRotation,startAngle:ang,cx:H.cx,cy:H.cy}
-    canvas.setPointerCapture(e.pointerId)
-    e.preventDefault(); return
-  }
-
-  for(const key of ['tl','tr','bl','br']){
-    const pt=H[key]
-    if(dist(mx,my,pt.x,pt.y)<=HANDLE_R*1.8){
-      dragMode='scale'
-      dragStart={mx,my,scale:activeText().textScale,cx:H.cx,cy:H.cy,startDist:dist(mx,my,H.cx,H.cy)}
-      canvas.setPointerCapture(e.pointerId)
-      e.preventDefault(); return
+  
+  // 1. Check Handles (if any active layer)
+  if(H) {
+    if(dist(mx,my,H.rot.x,H.rot.y)<=HANDLE_R*1.8){
+      const ld = getActiveLayerData()
+      const ang=Math.atan2(my-H.cy,mx-H.cx)
+      dragMode='rotate'
+      dragStart={mx,my,rotation:ld.rot,startAngle:ang,cx:H.cx,cy:H.cy}
+      canvas.setPointerCapture(e.pointerId); e.preventDefault(); return
+    }
+    for(const key of ['tl','tr','bl','br']){
+      const pt=H[key]
+      if(dist(mx,my,pt.x,pt.y)<=HANDLE_R*1.8){
+        const ld = getActiveLayerData()
+        dragMode='scale'
+        dragStart={mx,my,scale:ld.scale,cx:H.cx,cy:H.cy,startDist:dist(mx,my,H.cx,H.cy)}
+        canvas.setPointerCapture(e.pointerId); e.preventDefault(); return
+      }
     }
   }
 
+  // 2. Select Lottie?
   const {w,h}=FORMATS[S.format]
   for(let i=S.lotties.length-1;i>=0;i--){
     const l=S.lotties[i]
     const lx=l.xPct/100*w, ly=l.yPct/100*h
     if(Math.abs(mx-lx)<l.animW*l.scale*0.5&&Math.abs(my-ly)<l.animH*l.scale*0.5){
+      S.activeLayer = {type:'lottie', id:i}; setActiveLottie(i)
       draggingLottieIdx=i; lDragOffX=mx-lx; lDragOffY=my-ly
-      dragMode='lottie-move'
-      canvas.setPointerCapture(e.pointerId)
-      clearLongPressTimer()
-      setActiveLottie(i); e.preventDefault(); return
+      dragMode='move'
+      dragStart={mx,my,xPct:l.xPct,yPct:l.yPct}
+      canvas.setPointerCapture(e.pointerId); e.preventDefault(); return
     }
   }
 
+  // 3. Select Text?
   for(let i=S.texts.length-1;i>=0;i--){
     if(mouseInTextBox(mx,my,S.texts[i])){
-      setActiveText(S.texts[i].id)
-      break
+      S.activeLayer = {type:'text', id:S.texts[i].id}; setActiveText(S.texts[i].id)
+      dragMode='move'
+      dragStart={mx,my,xPct:activeText().textXPct,yPct:activeText().textYPct}
+      canvas.setPointerCapture(e.pointerId); e.preventDefault(); return
     }
   }
-  if(mouseInTextBox(mx,my)){
-    dragMode='move'
-    dragStart={mx,my,xPct:activeText().textXPct,yPct:activeText().textYPct}
-    canvas.setPointerCapture(e.pointerId)
-    clearLongPressTimer()
-    e.preventDefault(); return
+
+  // 4. Select Image?
+  if(S.image) {
+    const fit = Math.min(w*0.7/S.image.width, h*0.7/S.image.height)
+    const iw = S.image.width * fit * S.imgScale, ih = S.image.height * fit * S.imgScale
+    const ix = S.imgXPct/100*w, iy = S.imgYPct/100*h
+    // Simple bbox check for rotation 0, or just proximity
+    if(Math.abs(mx-ix)<iw/2 && Math.abs(my-iy)<ih/2) {
+      S.activeLayer = {type:'image', id:'bgImage'}
+      dragMode='move'
+      dragStart={mx,my,xPct:S.imgXPct,yPct:S.imgYPct}
+      canvas.setPointerCapture(e.pointerId); e.preventDefault(); return
+    }
   }
 }, { passive:false })
 
@@ -883,41 +910,28 @@ canvas.addEventListener('pointermove',e=>{
   const {x:rx,y:ry}=getCanvasPoint(e)
   const {x:mx,y:my}=toLogical(rx,ry)
   const {w,h}=FORMATS[S.format]
-  maybeCancelLongPress(e, mx, my)
-
-  if(draggingLottieIdx>=0){
-    const l=S.lotties[draggingLottieIdx]
-    l.xPct=Math.max(0,Math.min(100,(mx-lDragOffX)/w*100))
-    l.yPct=Math.max(0,Math.min(100,(my-lDragOffY)/h*100))
-    if (!canvas.hasPointerCapture(e.pointerId)) canvas.setPointerCapture(e.pointerId)
-    syncLottieSliders(); return
-  }
 
   if(dragMode==='move'){
-    const t=activeText()
     const rawX = (dragStart.xPct/100*w)+(mx-dragStart.mx)
     const rawY = (dragStart.yPct/100*h)+(my-dragStart.my)
     const snapped = snapMove(rawX, rawY, w, h)
-    t.textXPct=Math.max(0,Math.min(100,snapped.x/w*100))
-    t.textYPct=Math.max(0,Math.min(100,snapped.y/h*100))
-    if (snapped.snapped) hapticTick()
-    syncTextSliders(); return
+    updateActiveLayerProp('xPct', snapped.x/w*100)
+    updateActiveLayerProp('yPct', snapped.y/h*100)
+    if (snapped.snapped) hapticTick(); return
   }
 
   if(dragMode==='rotate'){
-    const t=activeText()
     const newAng=Math.atan2(my-dragStart.cy,mx-dragStart.cx)
     const delta=(newAng-dragStart.startAngle)*180/Math.PI
     const snapped = snapRotation(dragStart.rotation+delta)
-    t.textRotation=snapped.deg
-    if (snapped.snapped) hapticTick()
-    syncTextSliders(); return
+    updateActiveLayerProp('rot', snapped.deg)
+    if (snapped.snapped) hapticTick(); return
   }
 
   if(dragMode==='scale'){
     const d=dist(mx,my,dragStart.cx,dragStart.cy)
-    if(dragStart.startDist>0) activeText().textScale=Math.max(0.05,Math.min(2.0,dragStart.scale*d/dragStart.startDist))
-    syncTextSliders(); return
+    if(dragStart.startDist>0) updateActiveLayerProp('scale', Math.max(0.05,Math.min(5.0,dragStart.scale*d/dragStart.startDist)))
+    return
   }
 
   const H=getHandlesLogical()
@@ -992,24 +1006,23 @@ canvas.addEventListener('touchstart',e=>{
 canvas.addEventListener('touchmove',e=>{
   if(!touchGesture || e.touches.length!==2) return
   const {w,h}=FORMATS[S.format]
-  const t=activeText()
+  const ld = getActiveLayerData(); if(!ld) return
   const p1=getTouchLogicalPoint(e.touches[0])
   const p2=getTouchLogicalPoint(e.touches[1])
   const mid={x:(p1.x+p2.x)/2,y:(p1.y+p2.y)/2}
   const curDist=touchDistance(p1,p2)
   const curAngle=touchAngle(p1,p2)
   if(touchGesture.startDist>0){
-    t.textScale=Math.max(0.05,Math.min(2.0,touchGesture.startScale*(curDist/touchGesture.startDist)))
+    updateActiveLayerProp('scale', Math.max(0.05,Math.min(5.0,touchGesture.startScale*(curDist/touchGesture.startDist))))
   }
   const rotSnap = snapRotation(touchGesture.startRotation + ((curAngle-touchGesture.startAngle)*180/Math.PI))
-  t.textRotation=rotSnap.deg
+  updateActiveLayerProp('rot', rotSnap.deg)
   const rawX = (touchGesture.startXPct/100*w) + (mid.x-touchGesture.startMid.x)
   const rawY = (touchGesture.startYPct/100*h) + (mid.y-touchGesture.startMid.y)
   const moveSnap = snapMove(rawX, rawY, w, h)
-  t.textXPct=Math.max(0,Math.min(100,moveSnap.x/w*100))
-  t.textYPct=Math.max(0,Math.min(100,moveSnap.y/h*100))
+  updateActiveLayerProp('xPct', moveSnap.x/w*100)
+  updateActiveLayerProp('yPct', moveSnap.y/h*100)
   if (rotSnap.snapped || moveSnap.snapped) hapticTick()
-  syncTextSliders()
   e.preventDefault()
 },{ passive:false })
 
@@ -1031,6 +1044,7 @@ canvas.addEventListener('touchcancel',()=>{
 function setLottieStatus(msg,color){ const el=document.getElementById('lottie-status'); if(el){el.textContent=msg;el.style.color=color||'#737373'} }
 function setActiveLottie(idx){
   S.activeLottieIdx=idx
+  S.activeLayer = { type:'lottie', id:idx }
   document.querySelectorAll('.lottie-item').forEach((el,i)=>el.classList.toggle('lottie-active',i===idx))
   const ctrl=document.getElementById('lottie-controls')
   if(idx>=0){ctrl.classList.remove('hidden');syncLottieSliders()} else ctrl.classList.add('hidden')
@@ -1459,7 +1473,72 @@ loop()
         lottie.loadAnimation({container:el,renderer:'svg',loop:true,autoplay:true,animationData:data,rendererSettings:{preserveAspectRatio:'xMidYMid meet'}})
       } catch{}
     })
-  },{root:document.querySelector('.sidebar'),threshold:0.1})
+  }, { threshold: 0.1 })
   new MutationObserver(()=>{ gallery.querySelectorAll('.lot-thumb:not([data-loaded])').forEach(t=>io.observe(t)) }).observe(gallery,{childList:true})
   gallery.querySelectorAll('.lot-thumb').forEach(t=>io.observe(t))
 })()
+
+function syncImageSliders(){
+  if(!S.image) return
+  const set=(id,v,dec)=>{ const el=document.getElementById(id); if(el){el.value=v; const ve=document.getElementById(id+'-v'); if(ve) ve.textContent=dec!=null?v.toFixed(dec):v} }
+  set('img-x',S.imgXPct,0); set('img-y',S.imgYPct,0); set('img-scale',S.imgScale,2); set('img-rotation',S.imgRotation,0); set('img-opacity',S.imgOpacity,2)
+}
+
+// Mobile Quick Actions
+const colorDrawer = document.getElementById('color-drawer')
+const stickerDrawer = document.getElementById('sticker-drawer')
+const formatDrawer = document.getElementById('format-drawer')
+const imageDrawer = document.getElementById('image-drawer')
+
+function toggleDrawer(drawer) {
+  const drawers = [colorDrawer, stickerDrawer, formatDrawer, imageDrawer]
+  drawers.forEach(d => {
+    if (d !== drawer && d.classList.contains('open')) {
+      d.classList.remove('open')
+      setTimeout(() => { d.hidden = true }, 350)
+    }
+  })
+
+  const isOpen = drawer.classList.contains('open')
+  if (!isOpen) {
+    drawer.hidden = false
+    // When opening a drawer, set the active layer accordingly
+    if(drawer === imageDrawer) { S.activeLayer = {type:'image', id:'bgImage'} }
+    else if(drawer === stickerDrawer) { S.activeLayer = {type:'lottie', id:S.activeLottieIdx} }
+    else if(drawer === colorDrawer) { /* color is global */ }
+    
+    setTimeout(() => drawer.classList.add('open'), 10)
+  } else {
+    drawer.classList.remove('open')
+    setTimeout(() => { if (!drawer.classList.contains('open')) drawer.hidden = true }, 350)
+  }
+}
+
+document.getElementById('desktop-color-btn')?.addEventListener('click', () => toggleDrawer(colorDrawer))
+document.getElementById('close-color-drawer')?.addEventListener('click', () => {
+  colorDrawer.classList.remove('open')
+  setTimeout(() => { colorDrawer.hidden = true }, 350)
+})
+
+document.getElementById('desktop-sticker-btn')?.addEventListener('click', () => toggleDrawer(stickerDrawer))
+document.getElementById('close-sticker-drawer')?.addEventListener('click', () => {
+  stickerDrawer.classList.remove('open')
+  setTimeout(() => { stickerDrawer.hidden = true }, 350)
+})
+
+document.getElementById('desktop-format-btn')?.addEventListener('click', () => toggleDrawer(formatDrawer))
+document.getElementById('close-format-drawer')?.addEventListener('click', () => {
+  formatDrawer.classList.remove('open')
+  setTimeout(() => { formatDrawer.hidden = true }, 350)
+})
+
+document.getElementById('desktop-image-btn')?.addEventListener('click', () => toggleDrawer(imageDrawer))
+document.getElementById('close-image-drawer')?.addEventListener('click', () => {
+  imageDrawer.classList.remove('open')
+  setTimeout(() => { imageDrawer.hidden = true }, 350)
+})
+
+document.getElementById('mobile-mp4-btn')?.addEventListener('click', () => {
+  const sidebarBtn = document.getElementById('mp4-btn')
+  if (sidebarBtn) sidebarBtn.click()
+})

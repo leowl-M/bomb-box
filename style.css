@@ -672,7 +672,9 @@ input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.15); }
   font-weight: 500;
 }
 
-.mobile-controls-toggle,
+.mobile-actions {
+  display: none;
+}
 .mobile-backdrop {
   display: none;
 }
@@ -789,6 +791,20 @@ input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.15); }
   html, body { height: auto; min-height: 100%; }
   body { overflow: auto; }
 
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    margin-bottom: 4px;
+  }
+  
+  .topbar-right .btn {
+    padding: 8px 10px;
+    font-size: 11px;
+    min-height: 36px;
+  }
+
+
   .app {
     flex-direction: column;
     min-height: 100svh;
@@ -835,30 +851,188 @@ input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.15); }
     z-index: 20;
   }
 
-  .mobile-controls-toggle {
-    display: inline-flex;
+  .mobile-actions {
+    display: flex;
     position: fixed;
-    left: 50%;
+    left: 10px;
+    right: 10px;
     bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-    transform: translateX(-50%);
     z-index: 30;
-    min-height: 48px;
-    min-width: 160px;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+  }
+
+  .mobile-actions > * {
+    pointer-events: auto;
+  }
+
+  .mobile-controls-toggle {
+    flex: 1;
+    display: inline-flex;
+    min-height: 52px;
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    border: 1px solid var(--border-2);
+    border: 1px solid var(--border-3);
     background: var(--glass-2);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
     color: var(--fg);
-    font-weight: 600;
-    letter-spacing: 0;
-    box-shadow: var(--sh-soft);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
     padding: 0 16px;
+    transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
   }
 
-  .app.mobile-controls-open ~ .mobile-controls-toggle {
-    background: color-mix(in srgb, var(--lime) 22%, var(--glass-2));
+  .mobile-action-btn {
+    width: 52px;
+    height: 52px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--border-2);
+    background: var(--glass-2);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    color: var(--fg);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+    transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+    padding: 0;
   }
+
+  .mobile-action-icon {
+    font-size: 19px;
+    line-height: 1;
+  }
+
+  .mobile-action-label {
+    font-size: 8px;
+    text-transform: uppercase;
+    font-weight: 800;
+    margin-top: 2px;
+    color: var(--fg-dim);
+    letter-spacing: 0.05em;
+  }
+
+  .app.mobile-controls-open ~ .mobile-actions .mobile-controls-toggle {
+    background: color-mix(in srgb, var(--lime) 25%, var(--glass-3));
+    border-color: var(--lime);
+    color: #fff;
+    box-shadow: 0 0 20px color-mix(in srgb, var(--lime) 30%, transparent);
+  }
+
+  .mobile-action-btn:active, .mobile-controls-toggle:active {
+    transform: scale(0.92) translateY(2px);
+    filter: brightness(1.2);
+  }
+
+  #mp4-btn {
+    display: none;
+  }
+
+  /* Color Drawer Mobile */
+  .color-drawer, .sticker-drawer, .format-drawer, .image-drawer {
+    display: flex !important;
+    flex-direction: column;
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    z-index: 45;
+    background: var(--glass-1);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid var(--border-2);
+    border-radius: var(--r-3);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    transform: translateY(calc(100% + 20px));
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.35s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.35s ease;
+    max-height: 70svh;
+  }
+  .color-drawer.open, .sticker-drawer.open, .format-drawer.open, .image-drawer.open {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-1);
+  }
+  .drawer-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--fg);
+    letter-spacing: -0.01em;
+  }
+  .drawer-close-btn {
+    background: transparent;
+    border: none;
+    color: var(--fg-dim);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+  }
+  .drawer-body {
+    padding: 20px;
+    overflow-y: auto;
+  }
+}
+
+/* Color Drawer Desktop */
+@media (min-width: 861px) {
+  .color-drawer, .sticker-drawer, .format-drawer, .image-drawer {
+    display: flex !important;
+    flex-direction: column;
+    position: fixed;
+    top: 80px;
+    right: 24px;
+    width: 320px;
+    z-index: 45;
+    background: var(--glass-1);
+    backdrop-filter: blur(32px) saturate(150%);
+    -webkit-backdrop-filter: blur(32px) saturate(150%);
+    border: 1px solid var(--border-1);
+    border-radius: var(--r-3);
+    box-shadow: var(--sh-card);
+    transform: translateX(30px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+  .color-drawer.open, .sticker-drawer.open, .format-drawer.open, .image-drawer.open {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .sticker-drawer, .image-drawer {
+    width: 380px; /* Un po' più largo per gallery/controlli */
+  }
+  .format-drawer {
+    width: 300px;
+  }
+  .drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-1);
+  }
+  .drawer-title { font-size: 12px; font-weight: 600; color: var(--fg); }
+  .drawer-close-btn { background: transparent; border: none; color: var(--fg-dim); font-size: 20px; cursor: pointer; }
+  .drawer-body { padding: 16px; }
+}
+
 
   body.mobile-ui-lock {
     overflow: hidden;
