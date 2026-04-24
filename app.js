@@ -1115,6 +1115,16 @@ document.getElementById('lottie-add-btn').addEventListener('click',()=>{
   })
 })
 
+function triggerDownload(url, filename) {
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+}
+
 let recorder=null, recChunks=[], recActive=false
 document.getElementById('rec-btn').addEventListener('click',()=>{
   if(recActive){ recorder?.stop(); return }
@@ -1125,7 +1135,9 @@ document.getElementById('rec-btn').addEventListener('click',()=>{
   recChunks=[]
   recorder.ondataavailable=e=>{ if(e.data.size>0) recChunks.push(e.data) }
   recorder.onstop=()=>{
-    Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob(recChunks,{type:mimeType})),download:`video_${S.format}_${Date.now()}.webm`}).click()
+    const url = URL.createObjectURL(new Blob(recChunks,{type:mimeType}))
+    triggerDownload(url, `video_${S.format}_${Date.now()}.webm`)
+    setTimeout(()=>URL.revokeObjectURL(url), 10000)
     hideTransformHandles=false
     recActive=false; document.getElementById('rec-btn').textContent='Export WEBM'
     document.getElementById('rec-status').textContent='Download completato'
@@ -1218,7 +1230,7 @@ document.getElementById('mp4-btn').addEventListener('click', async () => {
     
     const blob = new Blob([target.buffer], { type: 'video/mp4' })
     const url = URL.createObjectURL(blob)
-    Object.assign(document.createElement('a'), { href: url, download: `video_${S.format}_${Date.now()}.mp4` }).click()
+    triggerDownload(url, `video_${S.format}_${Date.now()}.mp4`)
     setTimeout(() => URL.revokeObjectURL(url), 10000)
     
     setMP4Status('Download MP4 completato'); setTimeout(() => setMP4Status(''), 4000)
@@ -1253,7 +1265,7 @@ document.getElementById('seq-btn').addEventListener('click',async()=>{
     setSeqStatus('Compressione zip...')
     const zipBlob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}})
     const url=URL.createObjectURL(zipBlob)
-    Object.assign(document.createElement('a'),{href:url,download:`frames_${S.format}_${Date.now()}.zip`}).click()
+    triggerDownload(url, `frames_${S.format}_${Date.now()}.zip`)
     setTimeout(()=>URL.revokeObjectURL(url),10000)
     setSeqStatus('Download sequenza completato'); setTimeout(()=>setSeqStatus(''),4000)
   } catch(err){
@@ -1274,7 +1286,9 @@ function savePreset(){
   data.texts=S.texts
   data.activeTextId=S.activeTextId
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'})
-  Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:name.replace(/\s+/g,'_')+'.json'}).click()
+  const url = URL.createObjectURL(blob)
+  triggerDownload(url, name.replace(/\s+/g,'_')+'.json')
+  setTimeout(() => URL.revokeObjectURL(url), 10000)
 }
 function applyPreset(data){
   PRESET_KEYS.forEach(k=>{ if(k in data) S[k]=data[k] })
