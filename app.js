@@ -1166,7 +1166,31 @@ document.getElementById('rec-btn').addEventListener('click',()=>{
 let mp4MuxerMod=null, isCapturing=false
 let seqZipMod=null, isExportingSequence=false
 async function getMuxer(){ if(mp4MuxerMod) return mp4MuxerMod; mp4MuxerMod=await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5/build/mp4-muxer.mjs'); return mp4MuxerMod }
-function setMP4Status(msg){ document.getElementById('mp4-status').textContent=msg }
+function setMP4Status(msg, progress){
+  const el = document.getElementById('mp4-status'); if(el) el.textContent=msg
+  const overlay = document.getElementById('export-overlay')
+  const statusMsg = document.getElementById('export-status-msg')
+  const bar = document.getElementById('export-progress-bar')
+  
+  if (overlay && !overlay.hidden) {
+    if (statusMsg) statusMsg.textContent = msg
+    if (bar && progress !== undefined) bar.style.width = progress + '%'
+  }
+}
+
+function showExportOverlay() {
+  const overlay = document.getElementById('export-overlay')
+  const bar = document.getElementById('export-progress-bar')
+  if (overlay) {
+    overlay.hidden = false
+    if (bar) bar.style.width = '0%'
+  }
+}
+
+function hideExportOverlay() {
+  const overlay = document.getElementById('export-overlay')
+  if (overlay) overlay.hidden = true
+}
 async function getZipLib(){ if(seqZipMod) return seqZipMod.default || seqZipMod; seqZipMod=await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm'); return seqZipMod.default || seqZipMod }
 function setSeqStatus(msg){ document.getElementById('seq-status').textContent=msg }
 function canvasToPngBlob(){
@@ -1183,6 +1207,8 @@ document.getElementById('mp4-btn').addEventListener('click', async () => {
   if (isCapturing) return
   if (!window.VideoEncoder) { setMP4Status('Errore: WebCodecs non supportato'); return }
   isCapturing = true
+  showExportOverlay()
+  setMP4Status('Caricamento mp4-muxer...', 5)
   const btn = document.getElementById('mp4-btn'); btn.disabled = true; btn.textContent = 'In corso...'
   const dur = parseInt(document.getElementById('duration').value), fps = S.fps, total = dur * fps
   const { w, h } = FORMATS[S.format]
@@ -1286,13 +1312,14 @@ document.getElementById('mp4-btn').addEventListener('click', async () => {
 
       // Feedback più frequente e respiro per il thread principale su mobile
       if (i % 10 === 0) {
-        setMP4Status(`Rendering frame ${i + 1}/${total}...`);
+        const progress = Math.round((i / total) * 90) + 5
+        setMP4Status(`Rendering frame ${i + 1}/${total}...`, progress);
         await new Promise(r => setTimeout(r, 5)); // Throttling per evitare crash di memoria
       }
     }
     
     isPaused = false; S.lotties.forEach(l => l.anim.play()); hideTransformHandles = false
-    setMP4Status('Finalizzazione MP4...')
+    setMP4Status('Finalizzazione MP4...', 95)
     await encoder.flush(); muxer.finalize()
     
     const blob = new Blob([target.buffer], { type: 'video/mp4' })
@@ -1300,11 +1327,13 @@ document.getElementById('mp4-btn').addEventListener('click', async () => {
     triggerDownload(url, `video_${S.format}_${Date.now()}.mp4`)
     setTimeout(() => URL.revokeObjectURL(url), 10000)
     
-    setMP4Status('Download MP4 completato'); setTimeout(() => setMP4Status(''), 4000)
+    setMP4Status('Download completato!', 100)
+    setTimeout(() => { setMP4Status(''); hideExportOverlay() }, 2000)
   } catch (err) {
     console.error(err);
     const msg = err instanceof Error ? err.message : String(err);
     setMP4Status('Errore: ' + msg);
+    setTimeout(hideExportOverlay, 4000)
     isPaused = false; S.lotties.forEach(l => l.anim.play()); hideTransformHandles = false
   }
   btn.disabled = false; btn.textContent = 'Export MP4'; isCapturing = false
