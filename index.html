@@ -190,10 +190,10 @@
             <option value="" disabled>Caricamento font…</option>
           </select>
         </div>
-        <div id="font-zone" class="drop">
-          <input type="file" id="font-input" accept=".ttf,.otf,.woff,.woff2" hidden>
-          + Drop font (.ttf .otf .woff)
-        </div>
+        <label for="font-input" id="font-zone" class="drop" style="display: block;">
+          <input type="file" id="font-input" accept=".ttf,.otf,.woff,.woff2" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;">
+          Carica font (.ttf .otf .woff)
+        </label>
         <div id="font-status-msg" class="status-line"></div>
         <div class="slider-row">
           <label class="lbl">Crenatura</label>
@@ -288,10 +288,10 @@
       <button id="close-image-drawer" class="drawer-close-btn">&times;</button>
     </div>
     <div class="drawer-body sc">
-      <div id="upload-zone" class="drop">
-        <input type="file" id="file-input" accept="image/*" hidden>
-        + Drop immagine
-      </div>
+      <label for="file-input" id="upload-zone" class="drop" style="display: block;">
+        <input type="file" id="file-input" accept="image/*" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;">
+        Carica immagine
+      </label>
       <img id="img-thumb" class="img-thumb" style="display:none; margin-top: 14px;">
       
       <div id="image-controls" class="stack" style="margin-top: 20px;">
@@ -359,10 +359,10 @@
         <button id="lottie-add-btn" hidden>+</button>
       </div>
       <div class="hairline" style="margin: 20px 0;"></div>
-      <div id="lottie-zone" class="drop">
-        <input type="file" id="lottie-input" accept=".json" multiple hidden>
-        + Drop JSON Lottie
-      </div>
+      <label for="lottie-input" id="lottie-zone" class="drop" style="display: block;">
+        <input type="file" id="lottie-input" accept=".json" multiple style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;">
+        Carica JSON Lottie
+      </label>
       <div id="lottie-status" class="status-line" style="text-align:center; margin-top:8px;"></div>
       <div id="lottie-list" class="stack stack-tight" style="margin-top:20px;"></div>
       <div id="lottie-controls" class="stack hidden" style="margin-top:20px;">

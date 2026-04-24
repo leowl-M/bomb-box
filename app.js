@@ -469,7 +469,7 @@ document.getElementById('font-select').addEventListener('change',e=>{
   recalcFont()
 })
 const fontZone=document.getElementById('font-zone'), fontInput=document.getElementById('font-input')
-fontZone.addEventListener('click',()=>fontInput.click())
+// Click listener removed, handled by label tag in HTML
 fontZone.addEventListener('dragover',e=>{e.preventDefault();fontZone.classList.add('drag')})
 fontZone.addEventListener('dragleave',()=>fontZone.classList.remove('drag'))
 fontZone.addEventListener('drop',e=>{e.preventDefault();fontZone.classList.remove('drag');handleFontFile(e.dataTransfer.files[0])})
@@ -722,7 +722,7 @@ PALETTE_COLORS.forEach(c=>{
 updateColor('bg',S.bgColor); syncTextUI()
 
 const uploadZone=document.getElementById('upload-zone'), fileInput=document.getElementById('file-input')
-uploadZone.addEventListener('click',()=>fileInput.click())
+// Click listener removed, handled by label tag in HTML
 uploadZone.addEventListener('dragover',e=>{e.preventDefault();uploadZone.classList.add('border-neutral-500','text-neutral-400')})
 uploadZone.addEventListener('dragleave',()=>uploadZone.classList.remove('border-neutral-500','text-neutral-400'))
 uploadZone.addEventListener('drop',e=>{e.preventDefault();uploadZone.classList.remove('border-neutral-500','text-neutral-400');handleImageFile(e.dataTransfer.files[0])})
@@ -1084,7 +1084,7 @@ async function loadLottieJSON(file){
   rebuildLottieList(); setActiveLottie(S.lotties.length-1); setLottieStatus(label+' caricato','#31A362')
 }
 const lottieZone=document.getElementById('lottie-zone'), lottieInput=document.getElementById('lottie-input')
-lottieZone.addEventListener('click',()=>lottieInput.click())
+// Click listener removed, handled by label tag in HTML
 lottieZone.addEventListener('dragover',e=>{e.preventDefault();lottieZone.classList.add('border-neutral-500')})
 lottieZone.addEventListener('dragleave',()=>lottieZone.classList.remove('border-neutral-500'))
 lottieZone.addEventListener('drop',e=>{e.preventDefault();lottieZone.classList.remove('border-neutral-500');Array.from(e.dataTransfer.files).filter(f=>f.name.toLowerCase().endsWith('.json')).forEach(loadLottieJSON)})
@@ -1265,12 +1265,30 @@ document.getElementById('mp4-btn').addEventListener('click', async () => {
     S.lotties.forEach(l => l.anim.pause())
     
     for (let i = 0; i < total; i++) {
-      S.lotties.forEach(l => { const f = ((i / fps) * l.anim.frameRate) % l.anim.totalFrames; l.anim.goToAndStop(f, true) })
-      drawFrame((i / fps) * 1000)
-      const frameDuration = Math.round(1_000_000 / fps)
-      const frame = new VideoFrame(canvas, { timestamp: Math.round((i / fps) * 1_000_000), duration: frameDuration })
-      encoder.encode(frame, { keyFrame: i % (fps * 2) === 0 }); frame.close()
-      if (i % 15 === 0) { setMP4Status(`Encoding frame ${i + 1}/${total}...`); await new Promise(r => setTimeout(r, 0)) }
+      // Sincronizziamo ogni lottie al frame esatto
+      S.lotties.forEach(l => { 
+        const f = ((i / fps) * l.anim.frameRate) % l.anim.totalFrames; 
+        l.anim.goToAndStop(f, true); 
+      });
+      
+      // Piccolo trucco: attendiamo un istante per assicurarci che il renderer canvas di Lottie abbia finito
+      if (S.lotties.length > 0) {
+        await new Promise(r => requestAnimationFrame(r));
+      }
+
+      drawFrame((i / fps) * 1000);
+      
+      const frameDuration = Math.round(1_000_000 / fps);
+      const frame = new VideoFrame(canvas, { timestamp: Math.round((i / fps) * 1_000_000), duration: frameDuration });
+      
+      encoder.encode(frame, { keyFrame: i % (fps * 2) === 0 });
+      frame.close();
+
+      // Feedback più frequente e respiro per il thread principale su mobile
+      if (i % 10 === 0) {
+        setMP4Status(`Rendering frame ${i + 1}/${total}...`);
+        await new Promise(r => setTimeout(r, 5)); // Throttling per evitare crash di memoria
+      }
     }
     
     isPaused = false; S.lotties.forEach(l => l.anim.play()); hideTransformHandles = false
