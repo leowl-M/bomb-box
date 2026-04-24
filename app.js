@@ -1188,28 +1188,34 @@ document.getElementById('mp4-btn').addEventListener('click', async () => {
     const target=new ArrayBufferTarget()
     const muxer=new Muxer({target,video:{codec:'avc',width:w,height:h},fastStart:'in-memory'})
     
-    // FIX DEFINITIVO PER iOS/SAFARI
-    const encoder=new VideoEncoder({
+    // FIX DEFINITIVO SAFARI: Filtro totale su oggetti nulli restituiti dal VideoEncoder
+    const encoder = new VideoEncoder({
       output: (chunk, meta) => {
-        // Se Safari restituisce un config sporco/buggato, lo ricreiamo da zero
-        // passando solo lo stretto necessario (description) e nascondendo colorSpace
-        if (meta && meta.decoderConfig) {
-          const cleanMeta = {
-            decoderConfig: {
-              codec: meta.decoderConfig.codec,
-              description: meta.decoderConfig.description
-            }
-          };
-          muxer.addVideoChunk(chunk, cleanMeta);
-        } else {
-          muxer.addVideoChunk(chunk, meta);
+        if (!meta) {
+          muxer.addVideoChunk(chunk);
+          return;
         }
+        
+        let cleanMeta = { ...meta };
+        
+        // Bug Safari 1: decoderConfig interamente nullo (crasha il muxer)
+        if (cleanMeta.decoderConfig === null) {
+          delete cleanMeta.decoderConfig;
+        } 
+        // Bug Safari 2: decoderConfig esiste, ma colorSpace al suo interno è nullo
+        else if (cleanMeta.decoderConfig && typeof cleanMeta.decoderConfig === 'object') {
+          cleanMeta.decoderConfig = { ...cleanMeta.decoderConfig };
+          if (cleanMeta.decoderConfig.colorSpace === null) {
+            delete cleanMeta.decoderConfig.colorSpace;
+          }
+        }
+        
+        muxer.addVideoChunk(chunk, cleanMeta);
       },
       error: e => { throw e }
-    })
+    });
     
-    // FIX 2: Abbassato il bitrate a 10Mbps e usato il Main Profile (avc1.4D0032) 
-    // per non far crashare l'encoder hardware dell'iPhone/iPad
+    // Manteniamo il profilo AVC "Main" (avc1.4D0032) a 10 Mbps per evitare crash hardware su iOS
     encoder.configure({codec:'avc1.4D0032',width:w,height:h,bitrate:10_000_000,framerate:fps})
     
     hideTransformHandles=true
@@ -1232,7 +1238,6 @@ document.getElementById('mp4-btn').addEventListener('click', async () => {
     setMP4Status('Download MP4 completato'); setTimeout(()=>setMP4Status(''),4000)
   } catch(err){ 
     console.error(err); 
-    // Ora mostriamo l'errore esatto per capire cosa fallisce
     const msg = err instanceof Error ? err.message : String(err);
     setMP4Status('Errore: ' + msg); 
     isPaused=false; S.lotties.forEach(l=>l.anim.play()); hideTransformHandles=false 
