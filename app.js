@@ -1177,21 +1177,35 @@ document.getElementById('mp4-btn').addEventListener('click', async () => {
     setMP4Status('Caricamento mp4-muxer...')
     const { Muxer, ArrayBufferTarget } = await getMuxer()
     const target = new ArrayBufferTarget()
-    const muxer = new Muxer({ target, video: { codec: 'avc', width: w, height: h }, fastStart: 'in-memory' })
+    
+    // FORZIAMO il colorSpace nel costruttore per evitare che mp4-muxer crashi su Safari 
+    // se l'encoder non lo fornisce immediatamente o lo fornisce nullo.
+    const muxer = new Muxer({ 
+      target, 
+      video: { 
+        codec: 'avc', 
+        width: w, 
+        height: h,
+        colorSpace: {
+          primaries: 'bt709',
+          transfer: 'bt709',
+          matrix: 'bt709',
+          fullRange: false
+        }
+      }, 
+      fastStart: 'in-memory' 
+    })
     
     const encoder = new VideoEncoder({
       output: (chunk, meta) => {
-        let safeMeta = undefined;
+        let safeMeta = meta;
 
-        // Se esistono metadati, li "sanitizziamo" completamente
+        // Se Safari fornisce decoderConfig ma è problematico o manca il colorSpace
         if (meta && meta.decoderConfig) {
           safeMeta = {
+            ...meta,
             decoderConfig: {
-              codec: meta.decoderConfig.codec,
-              description: meta.decoderConfig.description,
-              codedWidth: meta.decoderConfig.codedWidth,
-              codedHeight: meta.decoderConfig.codedHeight,
-              // INIEZIONE DI SALVATAGGIO: se Safari restituisce null qui, lo sovrascriviamo
+              ...meta.decoderConfig,
               colorSpace: meta.decoderConfig.colorSpace || {
                 primaries: 'bt709',
                 transfer: 'bt709',
@@ -1202,15 +1216,13 @@ document.getElementById('mp4-btn').addEventListener('click', async () => {
           };
         }
         
-        // Passiamo i dati sicuri. Se safeMeta è undefined, 
-        // il muxer ignorerà il config e non crasherà.
         muxer.addVideoChunk(chunk, safeMeta);
       },
       error: e => { throw e }
     });
     
-    // Usiamo il Main Profile (4D) e 10Mbps per sicurezza sui chip mobile
-    encoder.configure({ codec: 'avc1.4D0032', width: w, height: h, bitrate: 10_000_000, framerate: fps })
+    // Usiamo un profilo Main (4D) e un bitrate più conservativo per stabilità mobile
+    encoder.configure({ codec: 'avc1.4D002A', width: w, height: h, bitrate: 8_000_000, framerate: fps })
     
     hideTransformHandles = true
     isPaused = true; lastAutoTriggerTime = -Infinity
