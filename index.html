@@ -23,7 +23,7 @@
       </div>
     </div>
 
-    <details class="sec" open style="--sec-color:#F7F6EB;">
+    <details class="sec" style="--sec-color:#F7F6EB;">
       <summary class="sec-head"><span class="sec-title">Preset</span><span class="sec-chev">▸</span></summary>
       <div class="sec-body">
         <div class="row-gap">
@@ -35,7 +35,7 @@
       </div>
     </details>
 
-    <details class="sec" open style="--sec-color:var(--lime);">
+    <details class="sec" style="--sec-color:var(--lime);">
       <summary class="sec-head"><span class="sec-title">Testo</span><span class="sec-chev">▸</span></summary>
       <div class="sec-body">
         <div class="row-gap">
@@ -53,7 +53,7 @@
       </div>
     </details>
 
-    <details class="sec" open style="--sec-color:var(--green);">
+    <details class="sec" style="--sec-color:var(--green);">
       <summary class="sec-head"><span class="sec-title">Trasforma</span><span class="sec-chev">▸</span></summary>
       <div class="sec-body">
         <div class="row-between">
@@ -83,7 +83,7 @@
       </div>
     </details>
 
-    <details class="sec" open style="--sec-color:var(--pink);">
+    <details class="sec" style="--sec-color:var(--pink);">
       <summary class="sec-head"><span class="sec-title">Animazione</span><span class="sec-chev">▸</span></summary>
       <div class="sec-body">
         <div class="row-between">
@@ -182,6 +182,50 @@
       </div>
     </details>
 
+    <details class="sec" style="--sec-color:#FF3EBA;">
+      <summary class="sec-head"><span class="sec-title">Ticker Scorrimento</span><span class="sec-chev">▸</span></summary>
+      <div class="sec-body">
+        <div class="row-between">
+          <span class="lbl">Testo scorrevole</span>
+          <button id="scroll-toggle" class="tog-btn-textual">OFF</button>
+        </div>
+        <div id="scroll-controls" style="display:none;" class="stack">
+          <div class="slider-row">
+            <label class="lbl">Velocità</label>
+            <input type="range" id="scroll-speed" min="0.1" max="20" step="0.1" value="2.0" style="--accent:#FF3EBA;">
+            <span class="val" id="scroll-speed-v">2.0</span>
+          </div>
+          <div class="lbl">Direzione</div>
+          <div class="seg" style="--accent:#FF3EBA;">
+            <div class="scroll-dir-btn active-btn active" data-dir="up">↑ Su</div>
+            <div class="scroll-dir-btn active-btn" data-dir="down">↓ Giù</div>
+          </div>
+          <div class="slider-row">
+            <label class="lbl">Gap blocchi</label>
+            <input type="range" id="scroll-gapv" min="0" max="600" step="4" value="0" style="--accent:#FF3EBA;">
+            <span class="val" id="scroll-gapv-v">0</span>
+          </div>
+          <div class="lbl">Modalità tile</div>
+          <div class="seg" style="--accent:#FF3EBA;">
+            <div class="scroll-tile-btn active-btn active" data-mode="single">Singolo</div>
+            <div class="scroll-tile-btn active-btn" data-mode="grid">Grid</div>
+          </div>
+          <div id="scroll-grid-controls" style="display:none;" class="stack">
+            <div class="slider-row">
+              <label class="lbl">Ripetizioni</label>
+              <input type="range" id="scroll-reps" min="1" max="10" step="1" value="3" style="--accent:#FF3EBA;">
+              <span class="val" id="scroll-reps-v">3</span>
+            </div>
+            <div class="slider-row">
+              <label class="lbl">Gap oriz.</label>
+              <input type="range" id="scroll-wordgap" min="0" max="300" step="4" value="60" style="--accent:#FF3EBA;">
+              <span class="val" id="scroll-wordgap-v">60</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+
     <details class="sec" style="--sec-color:#4A60FF;">
       <summary class="sec-head"><span class="sec-title">Pioggia</span><span class="sec-chev">▸</span></summary>
       <div class="sec-body">
@@ -256,7 +300,7 @@
       </div>
     </details>
 
-    <details class="sec" open style="--sec-color:#F7F6EB;">
+    <details class="sec" style="--sec-color:#F7F6EB;">
       <summary class="sec-head"><span class="sec-title">Tipografia</span><span class="sec-chev">▸</span></summary>
       <div class="sec-body">
         <div class="field">
@@ -304,7 +348,7 @@
       </div>
     </details>
 
-    <details class="sec" open style="--sec-color:var(--lime);">
+    <details class="sec" style="--sec-color:var(--lime);">
       <summary class="sec-head"><span class="sec-title">Export</span><span class="sec-chev">▸</span></summary>
       <div class="sec-body">
         <div class="slider-row">

@@ -80,12 +80,48 @@ document.querySelectorAll('.speed-preset').forEach(btn => {
   })
 })
 
+// ── Scroll ticker controls ────────────────────────────────────────────────────
+
+document.getElementById('scroll-toggle').addEventListener('click', function() {
+  S.scrollMode = !S.scrollMode
+  S.scrollY = 0
+  this.textContent = S.scrollMode ? 'ON' : 'OFF'
+  this.classList.toggle('border-[#FF3EBA]', S.scrollMode)
+  this.classList.toggle('text-[#FF3EBA]', S.scrollMode)
+  document.getElementById('scroll-controls').style.display = S.scrollMode ? 'block' : 'none'
+  recalcFont()
+})
+
+bindRange('scroll-speed',   'scrollSpeed',   'scroll-speed-v',   v => parseFloat(v))
+bindRange('scroll-gapv',    'scrollGapV',    'scroll-gapv-v',    v => parseInt(v))
+bindRange('scroll-reps',    'scrollReps',    'scroll-reps-v',    v => parseInt(v))
+bindRange('scroll-wordgap', 'scrollWordGap', 'scroll-wordgap-v', v => parseInt(v))
+
+document.querySelectorAll('.scroll-dir-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    S.scrollDirection = b.dataset.dir
+    document.querySelectorAll('.scroll-dir-btn').forEach(x => x.classList.remove('active'))
+    b.classList.add('active')
+  })
+})
+
+document.querySelectorAll('.scroll-tile-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    S.scrollTileMode = b.dataset.mode
+    document.querySelectorAll('.scroll-tile-btn').forEach(x => x.classList.remove('active'))
+    b.classList.add('active')
+    document.getElementById('scroll-grid-controls').style.display = S.scrollTileMode === 'grid' ? 'block' : 'none'
+    recalcFont()
+  })
+})
+
 // ── Preset save / load ────────────────────────────────────────────────────────
 
 const PRESET_KEYS = ['format','kerning','lineHeight','fps','bgColor',
   'imgScale','imgOpacity','imgCornerRadius','autoEffect','autoDelay','autoForce','effectDuration',
   'easingIn','easingOut','tremolio','tremolioForce','tremolioSpeed',
-  'globalScale','compPadL','compPadR','compPadT','compPadB','bgCornerRadius','currentFont']
+  'globalScale','compPadL','compPadR','compPadT','compPadB','bgCornerRadius','currentFont',
+  'scrollMode','scrollSpeed','scrollDirection','scrollGapV','scrollTileMode','scrollReps','scrollWordGap']
 
 function savePreset() {
   const name = document.getElementById('preset-name').value.trim() || 'preset'
@@ -127,13 +163,17 @@ function applyPreset(data) {
     'img-corner-radius':'img-corner-radius-v','fps':'fps-v','autoDelay':'autoDelay-v',
     'autoForce':'autoForce-v','effectDuration':'effectDuration-v',
     'tremolio-force':'tremolio-force-v','tremolio-speed':'tremolio-speed-v',
-    'global-scale':'global-scale-v','comp-pad-all':'comp-pad-all-v','bg-corner-radius':'bg-corner-radius-v'
+    'global-scale':'global-scale-v','comp-pad-all':'comp-pad-all-v','bg-corner-radius':'bg-corner-radius-v',
+    'scroll-speed':'scroll-speed-v','scroll-gapv':'scroll-gapv-v',
+    'scroll-reps':'scroll-reps-v','scroll-wordgap':'scroll-wordgap-v'
   }
   const smap = {
     'kerning':'kerning','lh':'lineHeight','img-scale':'imgScale','img-opacity':'imgOpacity',
     'img-corner-radius':'imgCornerRadius','fps':'fps','autoDelay':'autoDelay','autoForce':'autoForce',
     'effectDuration':'effectDuration','tremolio-force':'tremolioForce','tremolio-speed':'tremolioSpeed',
-    'global-scale':'globalScale','comp-pad-all':'compPadL','bg-corner-radius':'bgCornerRadius'
+    'global-scale':'globalScale','comp-pad-all':'compPadL','bg-corner-radius':'bgCornerRadius',
+    'scroll-speed':'scrollSpeed','scroll-gapv':'scrollGapV',
+    'scroll-reps':'scrollReps','scroll-wordgap':'scrollWordGap'
   }
   Object.keys(rmap).forEach(id => {
     const el = document.getElementById(id), ve = document.getElementById(rmap[id])
@@ -155,6 +195,18 @@ function applyPreset(data) {
     tt.classList.toggle('text-[#CEFF00]', S.tremolio)
     const tc = document.getElementById('tremolio-controls')
     if (tc) { tc.style.display = S.tremolio ? 'flex' : 'none'; tc.style.flexDirection = 'column' }
+  }
+  const st = document.getElementById('scroll-toggle')
+  if (st) {
+    st.textContent = S.scrollMode ? 'ON' : 'OFF'
+    st.classList.toggle('border-[#FF3EBA]', S.scrollMode)
+    st.classList.toggle('text-[#FF3EBA]', S.scrollMode)
+    const sc = document.getElementById('scroll-controls')
+    if (sc) sc.style.display = S.scrollMode ? 'block' : 'none'
+    document.querySelectorAll('.scroll-dir-btn').forEach(b => b.classList.toggle('active', b.dataset.dir === S.scrollDirection))
+    document.querySelectorAll('.scroll-tile-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === S.scrollTileMode))
+    const sgc = document.getElementById('scroll-grid-controls')
+    if (sgc) sgc.style.display = S.scrollTileMode === 'grid' ? 'block' : 'none'
   }
   setFormat(S.format); recalcFont(); syncTextUI()
 }

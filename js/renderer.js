@@ -113,6 +113,61 @@ export function drawLineWithEffect(text, startX, startY, li, now, effectIntensit
   }
 }
 
+function drawScrollTicker(now, effectIntensity, w, h) {
+  const t = activeText()
+  const lines = (t.text||'').split('\n').map(l => l.trim()).filter(Boolean)
+  const safeLines = lines.length ? lines : ['']
+  const rh = rowH()
+  const bh = safeLines.length * rh + S.scrollGapV
+  if (bh <= 0) return
+
+  ctx.font = fontStr(S.fontSize, t.fontFamily)
+  if ('letterSpacing' in ctx) ctx.letterSpacing = S.kerning + 'px'
+  ctx.fillStyle = t.textColor
+  ctx.textBaseline = 'top'
+  ctx.textAlign = 'left'
+
+  const lineWidths = safeLines.map(l => {
+    const m = ctx.measureText(l||' ')
+    const hasB = typeof m.actualBoundingBoxLeft === 'number'
+    return hasB ? m.actualBoundingBoxLeft + m.actualBoundingBoxRight : m.width
+  })
+  const maxW = Math.max(...lineWidths, 1)
+  const availW = w - S.compPadL - S.compPadR
+
+  const scrollOffset = S.scrollDirection === 'up' ? S.scrollY : -S.scrollY
+  const phase = ((scrollOffset % bh) + bh) % bh
+  const numBlocks = Math.ceil(h / bh) + 2
+
+  for (let bi = 0; bi < numBlocks; bi++) {
+    const blockY = -phase + bi * bh
+    for (let li = 0; li < safeLines.length; li++) {
+      const line = safeLines[li]
+      const y = blockY + li * rh
+      ctx.font = fontStr(S.fontSize, t.fontFamily)
+      if ('letterSpacing' in ctx) ctx.letterSpacing = S.kerning + 'px'
+      ctx.fillStyle = t.textColor
+
+      if (S.scrollTileMode === 'grid') {
+        const N = Math.max(1, S.scrollReps)
+        const advW = ctx.measureText(line).width
+        const unit = advW + S.scrollWordGap
+        for (let xi = 0; xi < N; xi++) {
+          drawLineWithEffect(line, S.compPadL + xi * unit, y, li, now, effectIntensity, maxW, w, h)
+        }
+      } else {
+        const lw = lineWidths[li]
+        const align = t.align
+        let x
+        if (align === 'left')       x = S.compPadL
+        else if (align === 'right') x = S.compPadL + availW - lw
+        else                        x = S.compPadL + availW / 2 - lw / 2
+        drawLineWithEffect(line, x, y, li, now, effectIntensity, maxW, w, h)
+      }
+    }
+  }
+}
+
 export function drawFrame(simNow) {
   const { w, h } = FORMATS[S.format]
   ctx.clearRect(0, 0, w, h)
@@ -164,6 +219,50 @@ export function drawFrame(simNow) {
   if (rainEngine) {
     const rainDt = simNow !== undefined ? 1000/S.fps : 1000/60
     Matter.Engine.update(rainEngine, rainDt * rainSpeed)
+  }
+
+  if (S.scrollMode) {
+    drawScrollTicker(now, effectIntensity, w, h)
+    S.scrollY += S.scrollSpeed
+  } else {
+    ctx.font = fontStr(S.fontSize, activeText().fontFamily)
+    if ('letterSpacing' in ctx) ctx.letterSpacing = S.kerning + 'px'
+    for (const t of S.texts) {
+      const lines = (t.text||'').split('\n').map(l => l.trim()).filter(Boolean)
+      const safeLines = lines.length ? lines : ['']
+      const rh = rowH()
+      const totalH = rh * safeLines.length
+      ctx.font = fontStr(S.fontSize, t.fontFamily)
+      if ('letterSpacing' in ctx) ctx.letterSpacing = S.kerning + 'px'
+      const lineWidths = safeLines.map(l => {
+        const m = ctx.measureText(l||' ')
+        const hasB = typeof m.actualBoundingBoxLeft === 'number'
+        return hasB ? m.actualBoundingBoxLeft + m.actualBoundingBoxRight : m.width
+      })
+      const maxW = Math.max(...lineWidths, 1)
+      t._bboxW = maxW; t._bboxH = totalH
+
+      const cx = t.textXPct/100*w, cy = t.textYPct/100*h
+      ctx.save()
+      ctx.translate(cx, cy); ctx.rotate(t.textRotation * Math.PI/180); ctx.scale(t.textScale, t.textScale)
+      ctx.fillStyle = t.textColor
+      ctx.font = fontStr(S.fontSize, t.fontFamily)
+      if ('letterSpacing' in ctx) ctx.letterSpacing = S.kerning + 'px'
+      ctx.textBaseline = 'top'; ctx.textAlign = 'left'
+      safeLines.forEach((line, li) => {
+        const y = -totalH/2 + li*rh
+        const lw = lineWidths[li]
+        let x
+        if (t.align === 'center')     x = -lw/2
+        else if (t.align === 'right') x = maxW/2 - lw
+        else                          x = -maxW/2
+        drawLineWithEffect(line, x, y, li, now, effectIntensity, maxW, w, h)
+      })
+      ctx.restore()
+    }
+  }
+
+  if (rainEngine) {
     Matter.Composite.allBodies(rainEngine.world).filter(b => !b.isStatic).forEach(body => {
       const el = body._imgEl
       if (!el || !el.complete || el.naturalWidth === 0) return
@@ -172,42 +271,6 @@ export function drawFrame(simNow) {
       ctx.drawImage(el, -body._hw, -body._hh, body._hw*2, body._hh*2)
       ctx.restore()
     })
-  }
-
-  ctx.font = fontStr(S.fontSize, activeText().fontFamily)
-  if ('letterSpacing' in ctx) ctx.letterSpacing = S.kerning + 'px'
-  for (const t of S.texts) {
-    const lines = (t.text||'').split('\n').map(l => l.trim()).filter(Boolean)
-    const safeLines = lines.length ? lines : ['']
-    const rh = rowH()
-    const totalH = rh * safeLines.length
-    ctx.font = fontStr(S.fontSize, t.fontFamily)
-    if ('letterSpacing' in ctx) ctx.letterSpacing = S.kerning + 'px'
-    const lineWidths = safeLines.map(l => {
-      const m = ctx.measureText(l||' ')
-      const hasB = typeof m.actualBoundingBoxLeft === 'number'
-      return hasB ? m.actualBoundingBoxLeft + m.actualBoundingBoxRight : m.width
-    })
-    const maxW = Math.max(...lineWidths, 1)
-    t._bboxW = maxW; t._bboxH = totalH
-
-    const cx = t.textXPct/100*w, cy = t.textYPct/100*h
-    ctx.save()
-    ctx.translate(cx, cy); ctx.rotate(t.textRotation * Math.PI/180); ctx.scale(t.textScale, t.textScale)
-    ctx.fillStyle = t.textColor
-    ctx.font = fontStr(S.fontSize, t.fontFamily)
-    if ('letterSpacing' in ctx) ctx.letterSpacing = S.kerning + 'px'
-    ctx.textBaseline = 'top'; ctx.textAlign = 'left'
-    safeLines.forEach((line, li) => {
-      const y = -totalH/2 + li*rh
-      const lw = lineWidths[li]
-      let x
-      if (t.align === 'center')     x = -lw/2
-      else if (t.align === 'right') x = maxW/2 - lw
-      else                          x = -maxW/2
-      drawLineWithEffect(line, x, y, li, now, effectIntensity, maxW, w, h)
-    })
-    ctx.restore()
   }
 
   ctx.restore()
@@ -226,8 +289,9 @@ export function drawFrame(simNow) {
     ctx.restore()
   }
 
-  if (!flags.hideTransformHandles) drawHandlesOnCtx()
-  drawSnapGuides()
+  const scrollHidesText = S.scrollMode && S.activeLayer.type === 'text'
+  if (!flags.hideTransformHandles && !scrollHidesText) drawHandlesOnCtx()
+  if (!scrollHidesText) drawSnapGuides()
 
   ctx.restore()
 }

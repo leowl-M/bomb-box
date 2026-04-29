@@ -35,6 +35,14 @@ export const S = {
   globalScale: 1.0,
   compPadL: 0, compPadR: 0, compPadT: 0, compPadB: 0,
   bgCornerRadius: 0,
+  scrollMode: false,
+  scrollY: 0,
+  scrollSpeed: 2.0,
+  scrollDirection: 'up',
+  scrollGapV: 0,
+  scrollTileMode: 'single',
+  scrollReps: 3,
+  scrollWordGap: 60,
 }
 
 // Shared mutable flags — use object so any module can mutate them

@@ -28,11 +28,41 @@ export function recalcFont() {
   const { w } = FORMATS[S.format]
   const avail = w - S.compPadL - S.compPadR
   if (avail <= 0) return
+  const BASE = 100, SAFE = 0.995
+
+  if (S.scrollMode) {
+    const t = activeText()
+    const ls = (t.text||'').split('\n').map(l => l.trim()).filter(Boolean)
+    const safeLines = ls.length ? ls : ['M']
+    if (S.scrollTileMode === 'grid') {
+      const N = Math.max(1, S.scrollReps)
+      const maxAdv = Math.max(...safeLines.map(l => {
+        mCtx.font = fontStr(BASE, t.fontFamily)
+        if ('letterSpacing' in mCtx) mCtx.letterSpacing = S.kerning + 'px'
+        return mCtx.measureText(l||'M').width
+      }))
+      const gridAvail = avail - N * S.scrollWordGap
+      S.fontSize = gridAvail > 5 ? BASE * gridAvail / (N * maxAdv) * SAFE : 5
+    } else {
+      const maxVis = Math.max(...safeLines.map(l => measureAt(l||'M', BASE, t.fontFamily).visualW))
+      S.fontSize = maxVis > 0 ? BASE * avail / maxVis * SAFE : BASE
+      ctx.font = fontStr(S.fontSize, t.fontFamily)
+      if ('letterSpacing' in ctx) ctx.letterSpacing = S.kerning + 'px'
+      const actualMax = Math.max(...safeLines.map(l => {
+        ctx.font = fontStr(S.fontSize, t.fontFamily)
+        const m = ctx.measureText(l||'M')
+        const hasB = typeof m.actualBoundingBoxLeft === 'number'
+        return hasB ? m.actualBoundingBoxLeft + m.actualBoundingBoxRight : m.width
+      }))
+      if (actualMax > avail) S.fontSize *= (avail / actualMax) * SAFE
+    }
+    return
+  }
+
   const lines = S.texts.flatMap(t => {
     const ls = (t.text||'').split('\n').map(l => l.trim()).filter(Boolean)
     return (ls.length ? ls : ['M']).map(line => ({ line, fontFamily: t.fontFamily }))
   })
-  const BASE = 100, SAFE = 0.995
   const maxVis = Math.max(...lines.map(x => measureAt(x.line||'M', BASE, x.fontFamily).visualW))
   S.fontSize = maxVis > 0 ? BASE * avail / maxVis * SAFE : BASE
   ctx.font = fontStr(S.fontSize, activeText().fontFamily)

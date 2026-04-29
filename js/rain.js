@@ -206,6 +206,7 @@ export function getRainUrls() {
   return urls
 }
 
+
 export function rebuildRainStickerList() {
   const list = document.getElementById('rain-sticker-list')
   const section = document.getElementById('rain-sticker-section')
