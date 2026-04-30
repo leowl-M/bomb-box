@@ -201,21 +201,6 @@ export function drawFrame(simNow) {
     effectIntensity = Math.max(0, env)
   }
 
-  if (S.image) {
-    const img = S.image
-    const fit = Math.min(w*0.7/img.width, h*0.7/img.height) * S.imgScale
-    const iw2 = img.width*fit, ih2 = img.height*fit
-    const ix = S.imgXPct/100*w, iy = S.imgYPct/100*h
-    ctx.save()
-    ctx.globalAlpha = S.imgOpacity
-    ctx.translate(ix, iy); ctx.rotate(S.imgRotation * Math.PI/180)
-    if (S.imgCornerRadius > 0) {
-      ctx.beginPath(); ctx.roundRect(-iw2/2,-ih2/2,iw2,ih2,S.imgCornerRadius); ctx.clip()
-    }
-    ctx.drawImage(img, -iw2/2, -ih2/2, iw2, ih2)
-    ctx.restore()
-  }
-
   if (rainEngine) {
     const rainDt = simNow !== undefined ? 1000/S.fps : 1000/60
     Matter.Engine.update(rainEngine, rainDt * rainSpeed)
@@ -260,6 +245,21 @@ export function drawFrame(simNow) {
       })
       ctx.restore()
     }
+  }
+
+  if (S.image) {
+    const img = S.image
+    const fit = Math.min(w*0.7/img.width, h*0.7/img.height) * S.imgScale
+    const iw2 = img.width*fit, ih2 = img.height*fit
+    const ix = S.imgXPct/100*w, iy = S.imgYPct/100*h
+    ctx.save()
+    ctx.globalAlpha = S.imgOpacity
+    ctx.translate(ix, iy); ctx.rotate(S.imgRotation * Math.PI/180)
+    if (S.imgCornerRadius > 0) {
+      ctx.beginPath(); ctx.roundRect(-iw2/2,-ih2/2,iw2,ih2,S.imgCornerRadius); ctx.clip()
+    }
+    ctx.drawImage(img, -iw2/2, -ih2/2, iw2, ih2)
+    ctx.restore()
   }
 
   if (rainEngine) {
