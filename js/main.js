@@ -14,12 +14,14 @@ import { updateColor } from './color.js'
 import { syncTextUI } from './text.js'
 import { setFormat } from './ui.js'
 import { loop } from './renderer.js'
+import { initTimeline } from './timeline.js'
 
 // Bootstrap
 updateColor('bg', S.bgColor)
 syncTextUI()
 setFormat('post')
 loop()
+initTimeline()
 
 // Logo Lottie — metti logo.json nella root del progetto
 const bbLogoEl = document.getElementById('bb-logo-lottie')

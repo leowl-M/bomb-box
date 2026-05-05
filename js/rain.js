@@ -20,6 +20,61 @@ export function setRainModChaos(v) { rainModChaos = v }
 export function setRainModExplosive(v) { rainModExplosive = v }
 export function setRainIsLooping(v) { rainIsLooping = v }
 export function setRainTextCollision(v) { rainTextCollision = v }
+export function setRainImgUrls(urls) { rainImgUrls = urls }
+
+export function getRainState() {
+  const active = rainEngine
+    ? Matter.Composite.allBodies(rainEngine.world).filter(b => !b.isStatic).length > 0
+    : false
+  return {
+    effect: rainEffect,
+    speed: rainSpeed,
+    modChaos: rainModChaos,
+    modExplosive: rainModExplosive,
+    isLooping: rainIsLooping,
+    textCollision: rainTextCollision,
+    imgUrls: getRainUrls(),  // bake full URL set (uploaded + lottie frames + presets)
+    active,
+    amount: parseInt(document.getElementById('rain-amount')?.value || '20'),
+    size: parseInt(document.getElementById('rain-size')?.value || '60'),
+  }
+}
+
+export function setRainState(state) {
+  if (!state) return
+  setRainEffect(state.effect || 'normal')
+  setRainSpeed(state.speed ?? 1.0)
+  setRainModChaos(!!state.modChaos)
+  setRainModExplosive(!!state.modExplosive)
+  setRainIsLooping(!!state.isLooping)
+  setRainTextCollision(!!state.textCollision)
+  rainImgUrls = state.imgUrls ? [...state.imgUrls] : []
+  setRainGravity()
+  clearRain()
+
+  // Sync DOM controls to restored state
+  const effectEl = document.getElementById('rain-effect')
+  if (effectEl) effectEl.value = rainEffect
+  const speedEl = document.getElementById('rain-speed')
+  if (speedEl) { speedEl.value = rainSpeed; const sv = document.getElementById('rain-speed-v'); if (sv) sv.textContent = rainSpeed.toFixed(1) }
+  const chaosEl = document.getElementById('rain-chaos')
+  if (chaosEl) chaosEl.textContent = rainModChaos ? 'ON' : 'OFF'
+  const expEl = document.getElementById('rain-explosive')
+  if (expEl) expEl.textContent = rainModExplosive ? 'ON' : 'OFF'
+  const loopEl = document.getElementById('rain-loop')
+  if (loopEl) loopEl.textContent = rainIsLooping ? 'ON' : 'OFF'
+  const tcEl = document.getElementById('rain-text-collision')
+  if (tcEl) tcEl.textContent = rainTextCollision ? 'ON' : 'OFF'
+
+  if (state.active && rainImgUrls.length > 0) {
+    const amountEl = document.getElementById('rain-amount')
+    const sizeEl   = document.getElementById('rain-size')
+    if (amountEl && state.amount) amountEl.value = state.amount
+    if (sizeEl   && state.size)   sizeEl.value   = state.size
+    spawnRainForExport()
+  }
+  rebuildRainStickerList()
+}
 
 export function initRain() {
   if (rainEngine) return

@@ -45,6 +45,28 @@ export function rebuildLottieList() {
   rebuildRainStickerList()
 }
 
+export function restoreLottiesFromSnapshot(snaps, { skipUI = false } = {}) {
+  S.lotties.forEach(l => { try { l.anim.destroy() } catch {} l.container.remove() })
+  S.lotties = []
+  S.activeLottieIdx = -1
+  if (!snaps || !snaps.length) {
+    if (!skipUI) { rebuildLottieList(); setActiveLottie(-1) }
+    return
+  }
+  snaps.forEach(snap => {
+    if (!snap.animationData || typeof lottie === 'undefined') return
+    const container = document.createElement('div')
+    container.style.cssText = `position:fixed;top:-9999px;left:-9999px;width:${snap.animW}px;height:${snap.animH}px;pointer-events:none;overflow:hidden;`
+    document.body.appendChild(container)
+    const anim = lottie.loadAnimation({ container, renderer:'canvas', loop:true, autoplay:true, animationData:snap.animationData })
+    S.lotties.push({ anim, container, label:snap.label, animationData:snap.animationData, animW:snap.animW, animH:snap.animH, xPct:snap.xPct, yPct:snap.yPct, scale:snap.scale, opacity:snap.opacity, rotation:snap.rotation })
+  })
+  if (!skipUI) {
+    rebuildLottieList()
+    setActiveLottie(S.lotties.length > 0 ? 0 : -1)
+  }
+}
+
 export function removeLottie(idx) {
   S.lotties[idx].anim.destroy(); S.lotties[idx].container.remove(); S.lotties.splice(idx, 1)
   const next = new Set()
@@ -65,7 +87,7 @@ async function loadLottieJSON(file) {
   const anim = lottie.loadAnimation({ container, renderer:'canvas', loop:true, autoplay:true, animationData:data })
   anim.addEventListener('error', () => setLottieStatus('Errore animazione: ' + file.name, '#FF3EBA'))
   const label = file.name.replace(/\.json$/i, '')
-  S.lotties.push({ anim, container, label, animW, animH, xPct:50, yPct:50, scale:1.0, opacity:1.0, rotation:0 })
+  S.lotties.push({ anim, container, label, animationData:data, animW, animH, xPct:50, yPct:50, scale:1.0, opacity:1.0, rotation:0 })
   rebuildLottieList(); setActiveLottie(S.lotties.length-1); setLottieStatus(label + ' caricato', '#31A362')
 }
 
@@ -79,7 +101,7 @@ async function loadLottieFromURL(url, label) {
   document.body.appendChild(container)
   const anim = lottie.loadAnimation({ container, renderer:'canvas', loop:true, autoplay:true, animationData:data })
   anim.addEventListener('error', () => setLottieStatus('Errore: ' + label, '#FF3EBA'))
-  S.lotties.push({ anim, container, label, animW, animH, xPct:50, yPct:50, scale:1.0, opacity:1.0, rotation:0 })
+  S.lotties.push({ anim, container, label, animationData:data, animW, animH, xPct:50, yPct:50, scale:1.0, opacity:1.0, rotation:0 })
   rebuildLottieList(); setActiveLottie(S.lotties.length-1); setLottieStatus(label + ' caricato', '#31A362')
 }
 

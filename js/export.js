@@ -3,6 +3,7 @@ import { S, flags } from './state.js'
 import { canvas } from './canvas.js'
 import { drawFrame } from './renderer.js'
 import { spawnRainForExport, rainEngine } from './rain.js'
+import { TL, prepareSceneForExport, applyTransitionOverlay } from './timeline.js'
 
 export function triggerDownload(url, filename) {
   const a = document.createElement('a')
@@ -93,20 +94,13 @@ document.getElementById('mp4-btn').addEventListener('click', async () => {
 
     const encoder = new VideoEncoder({
       output: (chunk, meta) => {
-        try {
-          console.log('[MP4-DEBUG] chunk type:', chunk.type, '| meta:', JSON.stringify(meta, (k,v) => v instanceof ArrayBuffer ? `ArrayBuffer(${v.byteLength})` : v))
-          if (meta?.decoderConfig) console.log('[MP4-DEBUG] colorSpace:', JSON.stringify(meta.decoderConfig.colorSpace))
-        } catch(logErr) { console.warn('[MP4-DEBUG] log error:', logErr) }
-
         let safeMeta = meta
         if (meta?.decoderConfig) {
           safeMeta = { ...meta, decoderConfig: { ...meta.decoderConfig, colorSpace: meta.decoderConfig.colorSpace || { primaries:'bt709', transfer:'bt709', matrix:'bt709', fullRange:false } } }
         } else if (meta) {
           const { decoderConfig: _, ...rest } = meta; safeMeta = rest
         }
-
-        try { muxer.addVideoChunk(chunk, safeMeta) }
-        catch(muxErr) { console.error('[MP4-DEBUG] CRASH in addVideoChunk:', muxErr); throw muxErr }
+        muxer.addVideoChunk(chunk, safeMeta)
       },
       error: e => { throw e }
     })
@@ -222,4 +216,153 @@ document.getElementById('seq-btn').addEventListener('click', async () => {
 // Mobile shortcut
 document.getElementById('mobile-mp4-btn')?.addEventListener('click', () => {
   document.getElementById('mp4-btn')?.click()
+})
+
+// ── Timeline MP4 export ───────────────────────────────────────────────────────
+
+let isExportingTimeline = false
+
+function setTLExportStatus(msg, progress) {
+  const el = document.getElementById('tl-export-status')
+  if (el) el.textContent = msg
+  const overlay = document.getElementById('export-overlay')
+  if (overlay && !overlay.hidden) {
+    const sm = document.getElementById('export-status-msg')
+    const bar = document.getElementById('export-progress-bar')
+    if (sm) sm.textContent = msg
+    if (bar && progress !== undefined) bar.style.width = progress + '%'
+  }
+}
+
+document.getElementById('tl-export-mp4-btn')?.addEventListener('click', async () => {
+  if (isExportingTimeline) return
+  if (!window.VideoEncoder) { setTLExportStatus('Errore: WebCodecs non supportato'); return }
+  if (!TL.scenes.length) { setTLExportStatus('Nessuna scena nella timeline'); return }
+
+  isExportingTimeline = true
+  showExportOverlay()
+  setTLExportStatus('Caricamento mp4-muxer...', 5)
+
+  const btn = document.getElementById('tl-export-mp4-btn')
+  btn.disabled = true; btn.textContent = 'In corso...'
+
+  const fps = S.fps
+  const totalFrames = TL.scenes.reduce((sum, sc) => sum + Math.round(sc.duration * fps), 0)
+  const { w, h } = FORMATS[S.format]
+
+  try {
+    const { Muxer, ArrayBufferTarget } = await getMuxer()
+    const target = new ArrayBufferTarget()
+    const muxer = new Muxer({
+      target,
+      video: {
+        codec: 'avc', width: w, height: h,
+        colorSpace: { primaries: 'bt709', transfer: 'bt709', matrix: 'bt709', fullRange: false },
+      },
+      fastStart: 'in-memory',
+    })
+
+    const encoder = new VideoEncoder({
+      output: (chunk, meta) => {
+        let safeMeta = meta
+        if (meta?.decoderConfig) {
+          safeMeta = { ...meta, decoderConfig: { ...meta.decoderConfig, colorSpace: meta.decoderConfig.colorSpace || { primaries: 'bt709', transfer: 'bt709', matrix: 'bt709', fullRange: false } } }
+        } else if (meta) {
+          const { decoderConfig: _, ...rest } = meta; safeMeta = rest
+        }
+        muxer.addVideoChunk(chunk, safeMeta)
+      },
+      error: e => { throw e },
+    })
+    encoder.configure({ codec: 'avc1.4D002A', width: w, height: h, bitrate: 8_000_000, framerate: fps })
+
+    flags.isPaused = true
+    flags.hideTransformHandles = true
+    S.lotties.forEach(l => l.anim.pause())
+
+    // Offscreen canvas holds the last frame of the previous scene for transitions
+    const prevOffscreen = document.createElement('canvas')
+    prevOffscreen.width = w; prevOffscreen.height = h
+
+    let globalFrame = 0
+    for (let si = 0; si < TL.scenes.length; si++) {
+      const scene = TL.scenes[si]
+      const sceneFrames = Math.round(scene.duration * fps)
+      const tr = scene.transition || { type: 'none', duration: 0 }
+      const transFrames = (si > 0 && tr.type !== 'none' && tr.duration > 0)
+        ? Math.min(Math.round(tr.duration * fps), sceneFrames)
+        : 0
+
+      // Capture last rendered frame before switching scene state
+      if (transFrames > 0) {
+        prevOffscreen.getContext('2d').drawImage(canvas, 0, 0)
+      }
+
+      await prepareSceneForExport(scene)
+      S.lotties.forEach(l => l.anim.pause())
+
+      // Wait for rain sticker images to load for this scene
+      if (rainEngine) {
+        await Promise.all(
+          Matter.Composite.allBodies(rainEngine.world)
+            .filter(b => !b.isStatic && b._imgEl)
+            .map(b => new Promise(r => {
+              if (b._imgEl.complete && b._imgEl.naturalWidth > 0) { r(); return }
+              b._imgEl.onload = r; b._imgEl.onerror = r
+            }))
+        )
+      }
+
+      for (let i = 0; i < sceneFrames; i++) {
+        S.lotties.forEach(l => {
+          const f = ((i / fps) * l.anim.frameRate) % l.anim.totalFrames
+          l.anim.goToAndStop(f, true)
+        })
+        if (S.lotties.length > 0) await new Promise(r => requestAnimationFrame(r))
+
+        drawFrame((i / fps) * 1000)
+
+        // Overlay transition for first transFrames frames of this scene
+        if (transFrames > 0 && i < transFrames) {
+          applyTransitionOverlay(tr.type, i / transFrames, prevOffscreen)
+        }
+
+        const ts = Math.round((globalFrame / fps) * 1_000_000)
+        const dur = Math.round(1_000_000 / fps)
+        const frame = new VideoFrame(canvas, { timestamp: ts, duration: dur })
+        encoder.encode(frame, { keyFrame: globalFrame % (fps * 2) === 0 })
+        frame.close()
+        globalFrame++
+
+        if (globalFrame % 10 === 0) {
+          setTLExportStatus(`Rendering ${globalFrame}/${totalFrames}...`, Math.round((globalFrame / totalFrames) * 90) + 5)
+          await new Promise(r => setTimeout(r, 5))
+        }
+      }
+    }
+
+    flags.isPaused = false
+    S.lotties.forEach(l => l.anim.play())
+    flags.hideTransformHandles = false
+    setTLExportStatus('Finalizzazione MP4...', 95)
+    await encoder.flush()
+    muxer.finalize()
+
+    const blob = new Blob([target.buffer], { type: 'video/mp4' })
+    const url = URL.createObjectURL(blob)
+    triggerDownload(url, `timeline_${S.format}_${Date.now()}.mp4`)
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
+    setTLExportStatus('Download completato!', 100)
+    setTimeout(() => { setTLExportStatus(''); hideExportOverlay() }, 2000)
+  } catch (err) {
+    console.error(err)
+    setTLExportStatus('Errore: ' + (err instanceof Error ? err.message : String(err)))
+    setTimeout(hideExportOverlay, 4000)
+    flags.isPaused = false
+    S.lotties.forEach(l => l.anim.play())
+    flags.hideTransformHandles = false
+  }
+
+  btn.disabled = false; btn.textContent = 'Export Timeline MP4'
+  isExportingTimeline = false
 })

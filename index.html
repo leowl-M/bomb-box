@@ -364,9 +364,12 @@
         <button id="rec-btn" class="btn">Export WEBM</button>
         <button id="mp4-btn" class="btn">Export MP4</button>
         <button id="seq-btn" class="btn">Export PNG Sequence</button>
+
+        <button id="tl-export-mp4-btn" class="btn" style="--sec-color:var(--lime);">Export Timeline MP4</button>
         <div id="rec-status" class="status-line"></div>
         <div id="mp4-status" class="status-line"></div>
         <div id="seq-status" class="status-line"></div>
+        <div id="tl-export-status" class="status-line"></div>
       </div>
     </details>
 
@@ -393,6 +396,36 @@
     <div id="preview" class="preview-wrap">
       <canvas id="canvas" style="touch-action: none;"></canvas>
       <div id="fmt-badge">1080 × 1440</div>
+    </div>
+
+    <div id="timeline-bar" class="timeline-bar">
+      <button id="tl-toggle-btn" class="tl-toggle-btn" title="Mostra / Nascondi timeline">
+        <span class="tl-toggle-label">Timeline</span>
+        <span class="tl-chev">▲</span>
+      </button>
+      <div id="tl-body" class="tl-body">
+        <div class="tl-header">
+          <div class="tl-header-left">
+            <button id="tl-rewind-btn" class="tl-ctrl-btn tl-ctrl-sm" title="Riavvolgi">⏮</button>
+            <button id="tl-play-btn" class="tl-ctrl-btn" title="Play / Stop">▶</button>
+            <button id="tl-loop-btn" class="tl-ctrl-btn tl-ctrl-sm" title="Loop">↺</button>
+            <div class="tl-sep"></div>
+            <button id="tl-dup-btn" class="tl-ctrl-btn tl-ctrl-sm" title="Duplica scena (D)">⧉</button>
+            <button id="tl-add-btn" class="tl-ctrl-btn tl-add" title="Nuova scena">+</button>
+            <div class="tl-sep"></div>
+            <button id="tl-undo-btn" class="tl-ctrl-btn tl-ctrl-sm" title="Annulla (⌘Z)" disabled>↩</button>
+            <button id="tl-redo-btn" class="tl-ctrl-btn tl-ctrl-sm" title="Ripristina (⌘⇧Z)" disabled>↪</button>
+          </div>
+          <div class="tl-header-right">
+            <span id="tl-total" class="tl-total">0.0s</span>
+            <div class="tl-sep"></div>
+            <button id="tl-save-btn" class="tl-ctrl-btn tl-ctrl-sm" title="Salva progetto (.json)">↓</button>
+            <label class="tl-ctrl-btn tl-ctrl-sm" title="Carica progetto (.json)" style="cursor:pointer">↑<input type="file" id="tl-load-input" accept=".json" style="display:none"></label>
+          </div>
+        </div>
+        <div id="tl-scenes" class="tl-scenes"></div>
+        <div id="tl-playbar" class="tl-playbar"><div id="tl-playbar-fill" class="tl-playbar-fill"></div></div>
+      </div>
     </div>
   </main>
 
